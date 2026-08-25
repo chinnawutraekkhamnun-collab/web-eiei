@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COM PANG - Gaming & Hardware Store</title>
+    <!-- Tailwind CSS CDN & Font Awesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ซ่อนแถบเลื่อนแนวนอนของแถวสินค้า (ยังลากเลื่อนด้วยนิ้ว/เมาส์ได้ปกติ) */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <link rel="icon" type="image/x-icon" href="icon/favicon.ico">
+</head>
+
+<body class="bg-slate-950 text-gray-100 font-sans antialiased transition-colors duration-300">
+    <div class="snow-container" aria-hidden="true">
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- Welcome Ad Popup (แสดงตอนเปิดเว็บครั้งแรก) -->
+    <!-- ===================== -->
+    <div id="welcomeAdOverlay" onclick="closeWelcomeAd()"
+        class="fixed inset-0 top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-black/85 cursor-pointer transition-opacity duration-300">
+
+        <div id="welcomeAdCard" onclick="event.stopPropagation()" class="relative w-full max-w-md my-auto">
+
+            <!-- ปุ่มกากะบาดสีแดง ปิดโฆษณา -->
+            <button onclick="closeWelcomeAd()" aria-label="ปิดโฆษณา"
+                class="absolute -top-4 right-4 sm:-top-5 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-lg transition transform hover:scale-110 active:scale-95 z-20 cursor-pointer">
+                <i class="fa-solid fa-xmark text-base sm:text-lg"></i>
+            </button>
+
+            <!-- รูปโฆษณาสินค้าจริง (กดแล้วจะไปต่อที่สินค้า) -->
+            <img src="photo/pp.png" alt="เลือกอุปกรณ์เกมมิ่งที่เหมาะกับคุณ" onclick="continueWelcomeAd()"
+                class="w-full rounded-xl cursor-pointer hover:brightness-105 transition transform active:scale-98">
+        </div>
+    </div>
+
+    <!-- Header Navigation Bar -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <!-- Top Info Bar -->
+        <div
+            class="bg-black/60 text-gray-300 text-xs py-1.5 px-3 sm:px-4 flex justify-between items-center border-b border-slate-800/50">
+            <div class="flex items-center gap-3"></div>
+            <div class="flex items-center gap-3"></div>
+        </div>
+
+        <!-- Main Header -->
+        <div
+            class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-wrap md:flex-nowrap justify-between items-center gap-2 sm:gap-4">
+            <!-- Logo & Actions row in Mobile -->
+            <div class="flex justify-between items-center w-full md:w-auto">
+                <a href="#" onclick="filterCategory('all')"
+                    class="text-2xl sm:text-3xl font-black italic tracking-wider text-white flex items-center group">
+                    COM <span class="text-cyan-400 ml-1 group-hover:text-blue-500 transition">PANG</span>
+                </a>
+
+                <!-- Mobile Quick Action (Theme, Auth, Cart) -->
+                <div class="flex items-center gap-2 md:hidden">
+                    <button onclick="toggleTheme()"
+                        class="p-2 rounded-lg bg-slate-800 text-yellow-400 border border-slate-700">
+                        <i class="fa-solid fa-sun text-sm"></i>
+                    </button>
+                    <button onclick="toggleAuthModal()"
+                        class="p-2 rounded-lg bg-slate-800 text-cyan-400 border border-slate-700">
+                        <i class="fa-regular fa-user text-sm"></i>
+                    </button>
+                    <button onclick="toggleCartModal()"
+                        class="relative p-2 rounded-lg bg-slate-800 text-gray-200 border border-slate-700">
+                        <i class="fa-solid fa-cart-shopping text-sm"></i>
+                        <span
+                            class="cart-badge-mobile absolute -top-1.5 -right-1.5 bg-cyan-500 text-black font-extrabold text-[10px] rounded-full w-4 h-4 flex items-center justify-center">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="w-full md:flex-1 md:max-w-2xl order-3 md:order-2">
+                <div class="relative">
+                    <input type="text" id="searchInput" onkeyup="filterProducts()"
+                        placeholder="ค้นหาสินค้า เกมมิ่งเกียร์ สเปกคอม..." data-i18n-ph="searchPlaceholder"
+                        class="w-full pl-9 pr-4 py-1.5 sm:py-2 border border-slate-700 rounded-full bg-slate-800/80 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-xs sm:text-sm transition">
+                    <i
+                        class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 sm:top-3 text-cyan-400 text-xs sm:text-sm"></i>
+                </div>
+            </div>
+
+            <!-- Desktop Actions -->
+            <div class="hidden md:flex items-center gap-4 text-gray-200 order-2 md:order-3">
+                <button id="themeToggleBtn" onclick="toggleTheme()"
+                    class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-slate-700 transition"
+                    title="สลับโหมดสว่าง/มืด">
+                    <i id="themeIcon" class="fa-solid fa-sun text-lg"></i>
+                </button>
+
+                <div class="flex items-center gap-3">
+                    <div id="userInfoContainer" class="flex items-center gap-2">
+                        <button onclick="toggleAuthModal()"
+                            class="flex items-center gap-2 hover:text-cyan-400 text-sm font-medium transition">
+                            <i class="fa-regular fa-user text-xl text-cyan-400"></i>
+                            <span id="userStatusText" class="inline" data-i18n="loginRegister">เข้าสู่ระบบ /
+                                สมัครสมาชิก</span>
+                        </button>
+                    </div>
+                    <button id="logoutBtn" onclick="handleLogout()"
+                        class="hidden text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span data-i18n="logout">ออกจากระบบ</span>
+                    </button>
+                </div>
+
+                <button onclick="toggleCartModal()" class="relative p-2 text-gray-200 hover:text-cyan-400 transition">
+                    <i class="fa-solid fa-cart-shopping text-2xl"></i>
+                    <span id="cartCount"
+                        class="absolute -top-1 -right-1 bg-cyan-500 text-black font-extrabold text-xs rounded-full w-5 h-5 flex items-center justify-center shadow-lg">0</span>
+                </button>
+                <button onclick="toggleLanguage()"
+                    class="flex items-center gap-1 hover:text-cyan-400 transition font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-[11px] sm:text-xs">
+                    <i class="fa-solid fa-globe text-cyan-400"></i>
+                    <span id="langLabel">TH</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Category & Brand Menu Bar -->
+        <div class="border-t border-slate-800 bg-slate-900/90 backdrop-blur-md">
+            <div
+                class="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-4 text-xs sm:text-sm font-medium py-2">
+
+                <!-- หมวดหมู่สินค้าแนวนอน (ส่วนที่เลื่อนได้ overflow-x-auto) -->
+                <div class="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar py-1 shrink min-w-0">
+                    <button onclick="filterCategory('all')"
+                        class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg flex items-center gap-1.5 font-semibold transition shrink-0">
+                        <i class="fa-solid fa-border-all"></i> <span data-i18n="allProducts">หน้าแรก</span>
+                    </button>
+
+                    <!-- หมวดหมู่หลัก -->
+                    <div class="flex items-center gap-1 sm:gap-2 border-r border-slate-700 pr-2 sm:pr-4 shrink-0">
+                        <a href="m.html"
+                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                                class="fa-solid fa-mouse text-xs mr-1"></i><span data-i18n="catMouse">เมาส์</span></a>
+                        <a href="k.html"
+                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                                class="fa-solid fa-keyboard text-xs mr-1"></i><span
+                                data-i18n="catKeyboard">คีย์บอร์ด</span></a>
+                        <a href="h.html"
+                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                                class="fa-solid fa-headphones text-xs mr-1"></i><span
+                                data-i18n="catHeadset">หูฟัง</span></a>
+                        <a href="n.html"
+                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                                class="fa-solid fa-laptop text-xs mr-1"></i><span
+                                data-i18n="catNotebook">โน้ตบุ๊ก</span></a>
+                        <a href="mon.html"
+                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                                class="fa-solid fa-desktop text-xs mr-1"></i><span
+                                data-i18n="catMonitor">จอภาพ</span></a>
+                    </div>
+                </div>
+
+                <!-- ฝั่งขวา: Dropdown และปุ่มแอดมิน (อยู่นอก overflow-x-auto เพื่อไม่ให้ดร็อปดาวน์ถูกบัง) -->
+                <div class="flex items-center gap-2 shrink-0">
+                    <!-- Dropdown เพิ่มเติม -->
+                    <div class="relative group inline-block more-dropdown">
+                        <button onclick="toggleMoreDropdown(event)"
+                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1 flex items-center gap-1">
+                            <i class="fa-solid fa-ellipsis text-xs"></i>
+                            <span data-i18n="catMore">เพิ่มเติม</span>
+                            <i
+                                class="fa-solid fa-chevron-down text-[10px] ml-0.5 transition-transform group-hover:rotate-180 more-dropdown-chevron"></i>
+                        </button>
+
+                        <!-- เมนู Dropdown ลอยทับอย่างถูกต้อง -->
+                        <div
+                            class="absolute right-0 sm:left-0 mt-1 hidden group-hover:block w-48 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-lg shadow-xl py-2 z-[100] transition-all duration-200 more-dropdown-menu">
+
+                            <a href="speaker.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-volume-high w-5"></i><span data-i18n="catSpeaker">ลำโพง</span>
+                            </a>
+
+                            <a href="mic.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-microphone w-5"></i><span data-i18n="catMicrophone">ไมโครโฟน</span>
+                            </a>
+
+                            <a href="chair.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-chair w-5"></i><span data-i18n="catChair">เก้าอี้</span>
+                            </a>
+
+                            <a href="desk.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-table w-5"></i><span data-i18n="catDesk">โต๊ะ</span>
+                            </a>
+
+                            <a href="mousepad.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-regular fa-square w-5"></i><span data-i18n="catMousepad">แผ่นรองเมาส์</span>
+                            </a>
+
+                            <a href="cooling.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-fan w-5"></i><span data-i18n="catCooling">ระบบระบายความร้อน</span>
+                            </a>
+
+                            <a href="streaming.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-video w-5"></i><span data-i18n="catStreaming">อุปกรณ์สตรีมมิ่ง</span>
+                            </a>
+
+                            <a href="vr.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-vr-cardboard w-5"></i><span data-i18n="catVr">อุปกรณ์ VR</span>
+                            </a>
+
+                            <a href="racing.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-car w-5"></i><span data-i18n="catRacing">อุปกรณ์แข่งรถ</span>
+                            </a>
+
+                            <a href="controller.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-gamepad w-5"></i><span data-i18n="catController">จอยเกม</span>
+                            </a>
+
+                            <a href="camera.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-solid fa-camera w-5"></i><span data-i18n="catCamera">กล้อง</span>
+                            </a>
+
+                            <a href="flashdrive.html"
+                                class="text-gray-300 hover:bg-slate-800 hover:text-cyan-400 flex items-center transition w-full text-left px-4 py-2 text-xs">
+                                <i class="fa-brands fa-usb w-5"></i><span data-i18n="catFlashdrive">แฟลชไดรฟ์</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- ปุ่มจัดการสินค้า -->
+                    <button onclick="openAdminModal()"
+                        class="text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-gray-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-gear text-cyan-400"></i> <span data-i18n="adminManage">จัดการสินค้า</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content & Modals ต่อจากตรงนี้ตามปกติ -->
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <!-- Banner ใหญ่หลัก (Slider) -->
+        <div
+            class="banner-shine relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl mb-4 border border-cyan-500/30 group">
+            <div id="heroSlider"
+                class="flex transition-transform duration-500 ease-in-out w-full aspect-[21/9] sm:aspect-[25/9]">
+                <img src="photo/bender.jpg" alt="Main Banner 1" class="w-full h-full object-cover flex-shrink-0">
+                <img src="photo/1.png" alt="Main Banner 2" class="w-full h-full object-cover flex-shrink-0">
+                <img src="photo/2.jpg" alt="Main Banner 3" class="w-full h-full object-cover flex-shrink-0">
+            </div>
+
+            <button onclick="prevSlide()"
+                class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 shadow-lg text-xs sm:text-base">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button onclick="nextSlide()"
+                class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 shadow-lg text-xs sm:text-base">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+
+            <div id="sliderDots"
+                class="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-10">
+                <button onclick="goToSlide(0)"
+                    class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-cyan-400 transition-all"></button>
+                <button onclick="goToSlide(1)"
+                    class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white/50 hover:bg-white transition-all"></button>
+                <button onclick="goToSlide(2)"
+                    class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white/50 hover:bg-white transition-all"></button>
+            </div>
+        </div>
+
+        <!-- Banner เล็ก 3 รูป -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-8 sm:mb-10">
+            <div
+                class="banner-shine banner-delay-1 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-cyan-500/50 transition">
+                <img src="photo/bender1.jpg" alt="ประกอบคอมเทพ" class="w-full h-auto object-cover">
+            </div>
+            <div
+                class="banner-shine banner-delay-2 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-cyan-500/50 transition">
+                <img src="photo/bender2.jpg" alt="จัดชุดสตรีมเมอร์" class="w-full h-auto object-cover">
+            </div>
+            <div
+                class="banner-shine banner-delay-3 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-cyan-500/50 transition">
+                <img src="photo/bender3.jpg" alt="คอมลายพรีเมียม" class="w-full h-auto object-cover">
+            </div>
+        </div>
+
+        <!-- Flash Sale Product Display Section -->
+        <section id="flashsale-product-section" class="mb-8 sm:mb-12">
+            <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-red-500/30 pb-3 sm:pb-4">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-red-500 rounded-full"></div>
+                    <h2 class="text-lg sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
+                        <i class="fa-solid fa-bolt text-red-500"></i>
+                        <span data-i18n="flashSaleProducts">สินค้า Flash Sale</span>
+                    </h2>
+                </div>
+            </div>
+
+            <div id="flashSaleProductGrid"
+                class="flex overflow-x-auto gap-3 sm:gap-5 pb-4 no-scrollbar scroll-smooth snap-x">
+            </div>
+        </section>
+        <!-- Promo Double Slider Footer Section -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-8 sm:mt-12 mb-8">
+            <!-- Promo Slider Left -->
+            <div
+                class="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-cyan-500/30 group h-48 sm:h-64 md:h-72 bg-slate-900">
+                <div id="promoSlider1" class="flex transition-transform duration-500 ease-in-out h-full">
+                    <img src="photo/bender4.jpg" alt="Promo 1-1" class="w-full h-full object-cover flex-shrink-0">
+                    <img src="photo/77.png" alt="Promo 1-2" class="w-full h-full object-cover flex-shrink-0">
+                    <img src="photo/bender3.jpg" alt="Promo 1-3" class="w-full h-full object-cover flex-shrink-0">
+                </div>
+                <button onclick="prevPromoSlide(1)"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                <button onclick="nextPromoSlide(1)"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+                <div id="promoDots1" class="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10"></div>
+            </div>
+
+            <!-- Promo Slider Right -->
+            <div
+                class="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-cyan-500/30 group h-48 sm:h-64 md:h-72 bg-slate-900">
+                <div id="promoSlider2" class="flex transition-transform duration-500 ease-in-out h-full">
+                    <img src="photo/bender5.png" alt="Promo 2-1" class="w-full h-full object-cover flex-shrink-0">
+                    <img src="photo/88.png" alt="Promo 2-2" class="w-full h-full object-cover flex-shrink-0">
+                    <img src="photo/bender6.jpg" alt="Promo 2-3" class="w-full h-full object-cover flex-shrink-0">
+                </div>
+                <button onclick="prevPromoSlide(2)"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                <button onclick="nextPromoSlide(2)"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+                <div id="promoDots2" class="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10"></div>
+            </div>
+        </section>
+
+        <!-- Product Display Section -->
+        <section id="product-section">
+            <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-slate-800 pb-3 sm:pb-4">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-cyan-500 rounded-full"></div>
+                    <h2 class="text-lg sm:text-2xl font-bold text-white tracking-wide" data-i18n="recommendedProducts">
+                        รายการสินค้าแนะนำ</h2>
+                </div>
+            </div>
+
+            <div id="productGrid" class="flex overflow-x-auto gap-3 sm:gap-5 pb-4 no-scrollbar scroll-smooth snap-x">
+            </div>
+        </section>
+
+        <!-- Hot / Best-selling Product Display Section -->
+        <section id="hot-product-section">
+            <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-slate-800 pb-3 sm:pb-4">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-cyan-500 rounded-full"></div>
+                    <h2 class="text-lg sm:text-2xl font-bold text-white tracking-wide" data-i18n="hotProducts">
+                        รายการสินค้ายอดฮิต</h2>
+                </div>
+            </div>
+
+            <div id="hotProductGrid"
+                class="flex overflow-x-auto gap-3 sm:gap-5 pb-4 no-scrollbar scroll-smooth snap-x">
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Cart -->
+    <div id="cartModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex justify-end">
+        <div class="bg-slate-900 border-l border-slate-800 w-full sm:max-w-md h-full flex flex-col shadow-2xl">
+            <div class="p-3.5 sm:p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                <h3 class="font-bold text-base sm:text-lg text-white flex items-center gap-2">
+                    <i class="fa-solid fa-cart-shopping text-cyan-400"></i> <span
+                        data-i18n="cartTitle">ตะกร้าสินค้า</span>
+                </h3>
+                <button onclick="toggleCartModal()"
+                    class="text-gray-400 hover:text-white text-lg sm:text-xl transition p-1"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- แท็บ: ตะกร้าสินค้า / ประวัติการสั่งซื้อ -->
+            <div class="flex border-b border-slate-800 bg-slate-950 shrink-0">
+                <button id="cartTabBtn" onclick="switchCartTab('cart')"
+                    class="flex-1 py-2.5 text-xs sm:text-sm font-bold text-cyan-400 border-b-2 border-cyan-400 transition">
+                    <i class="fa-solid fa-cart-shopping mr-1.5"></i><span data-i18n="cartTabLabel">ตะกร้าสินค้า</span>
+                </button>
+                <button id="historyTabBtn" onclick="switchCartTab('history')"
+                    class="flex-1 py-2.5 text-xs sm:text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-200 transition">
+                    <i class="fa-solid fa-clock-rotate-left mr-1.5"></i><span
+                        data-i18n="historyTabLabel">ประวัติการสั่งซื้อ</span>
+                </button>
+            </div>
+
+            <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4"></div>
+            <div id="orderHistoryContainer"
+                class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 hidden"></div>
+
+            <div id="cartFooter" class="p-3.5 sm:p-4 border-t border-slate-800 bg-slate-950 space-y-3">
+                <div class="flex justify-between text-sm sm:text-base font-bold text-gray-200">
+                    <span data-i18n="totalPrice">ราคารวมทั้งหมด:</span>
+                    <span id="cartTotalPrice" class="text-cyan-400 text-lg sm:text-xl font-black">฿0</span>
+                </div>
+                <button onclick="checkout()"
+                    class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black py-2.5 sm:py-3 rounded-xl shadow-lg shadow-cyan-500/20 text-sm sm:text-base transition"
+                    data-i18n="checkoutBtn">สั่งซื้อสินค้า</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Auth -->
+    <div id="authModal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex justify-center items-center p-3 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl relative">
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1"><i
+                    class="fa-solid fa-xmark text-lg sm:text-xl"></i></button>
+
+            <h3 class="text-lg sm:text-xl font-bold mb-5 text-center text-white" id="authTitle" data-i18n="loginTitle">
+                เข้าสู่ระบบ</h3>
+
+            <form id="authForm" onsubmit="handleAuth(event)" class="space-y-3.5">
+                <div id="usernameContainer">
+                    <label class="block text-xs font-semibold text-gray-400 mb-1" id="authUsernameLabel"
+                        data-i18n="userOrEmailLabel">อีเมล / ชื่อผู้ใช้</label>
+                    <input type="text" id="authUsername" required
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                        placeholder="Enter username or email">
+                </div>
+
+                <div id="emailContainer" class="hidden">
+                    <label class="block text-xs font-semibold text-gray-400 mb-1" data-i18n="emailLabel">อีเมล
+                        (Email)</label>
+                    <input type="email" id="authEmail"
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                        placeholder="example@email.com">
+                </div>
+
+                <div id="passwordContainer">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-semibold text-gray-400" data-i18n="passwordLabel">รหัสผ่าน</label>
+                    </div>
+                    <input type="password" id="authPassword" required
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                        placeholder="••••••••">
+                </div>
+
+                <button type="submit" id="authSubmitBtn"
+                    class="w-full bg-cyan-500 text-slate-950 font-bold py-2.5 rounded-lg hover:bg-cyan-400 text-xs sm:text-sm shadow-md transition"
+                    data-i18n="submitBtn">ตกลง</button>
+            </form>
+
+            <p class="text-xs text-center mt-4 text-gray-400" id="authToggleFooter">
+                <span id="authToggleText" data-i18n="noAccountText">ยังไม่มีบัญชีใช่ไหม?</span>
+                <button onclick="switchAuthMode()" id="authBtnToggle"
+                    class="text-cyan-400 font-bold hover:underline ml-1"
+                    data-i18n="registerToggleBtn">สมัครสมาชิก</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- Modal: Admin CRUD -->
+    <div id="adminModal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex justify-center items-center p-3 sm:p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-4 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1"><i
+                    class="fa-solid fa-xmark text-lg sm:text-xl"></i></button>
+            <h3 class="text-base sm:text-xl font-bold mb-4 border-b border-slate-800 pb-3 text-white"
+                id="adminFormTitle" data-i18n="createProductTitle">เพิ่มสินค้าใหม่ (Create Product)</h3>
+
+            <form id="productForm" onsubmit="saveProduct(event)" class="space-y-3">
+                <input type="hidden" id="editProductId">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pNameLabel">ชื่อสินค้า</label>
+                        <input type="text" id="pName" required
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pCatLabel">หมวดหมู่</label>
+                        <select id="pCategory" required
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                            <option value="mouse" data-i18n="catMouse">เมาส์ (Mouse)</option>
+                            <option value="keyboard" data-i18n="catKeyboard">คีย์บอร์ด (Keyboard)</option>
+                            <option value="headset" data-i18n="catHeadset">หูฟัง (Headset)</option>
+                            <option value="speaker" data-i18n="catSpeaker">ลำโพง (Speaker)</option>
+                            <option value="microphone" data-i18n="catMicrophone">ไมโครโฟน (Microphone)</option>
+                            <option value="notebook" data-i18n="catNotebook">โน้ตบุ๊ก (Notebook)</option>
+                            <option value="chair" data-i18n="catChair">เก้าอี้ (Chair)</option>
+                            <option value="desk" data-i18n="catDesk">โต๊ะ (Desk)</option>
+                            <option value="mousepad" data-i18n="catMousepad">แผ่นรองเมาส์ (Mouse pad)</option>
+                            <option value="monitor" data-i18n="catMonitor">จอภาพ (Monitor)</option>
+                            <option value="cooling" data-i18n="catCooling">ระบบระบายความร้อน (Cooling)</option>
+                            <option value="streaming" data-i18n="catStreaming">อุปกรณ์สตรีมมิ่ง (Streaming)</option>
+                            <option value="vr" data-i18n="catVr">อุปกรณ์ VR (VR)</option>
+                            <option value="racing" data-i18n="catRacing">อุปกรณ์แข่งรถ (Racing Setup)</option>
+                            <option value="controller">จอยเกม (Game controller)</option>
+                            <option value="camera">กล้อง (Camera)</option>
+                            <option value="flashdrive">แฟลชไดรฟ์ (Flash drive)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pBrandLabel">แบรนด์/ค่าย</label>
+                        <input type="text" id="pBrand" required
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pOldPriceLabel">ราคาปกติ (บาท)</label>
+                        <input type="number" id="pOldPrice" required
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pPriceLabel">ราคาขายจริง (บาท)</label>
+                        <input type="number" id="pPrice" required
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pSubCatLabel">ชนิดสินค้า</label>
+                        <select id="pSubCategory"
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                            <option value="normal" data-i18n="pSubNormal">สินค้าทั่วไป</option>
+                            <option value="recommended" data-i18n="pSubRecommended">สินค้าแนะนำ</option>
+                            <option value="hot" data-i18n="pSubHot">สินค้ายอดฮิต</option>
+                            <option value="flashsale" data-i18n="pSubFlashsale">สินค้า Flash Sale</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1"
+                        data-i18n="pSpecsLabel">รายละเอียด/สเปกย่อ</label>
+                    <textarea id="pSpecs" rows="2"
+                        class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white"></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-400 mb-1" data-i18n="pImgLabel">URL
+                            รูปภาพสินค้า</label>
+                        <input type="url" id="pImg" required
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white"
+                            placeholder="https://...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1"
+                            data-i18n="pWarrantyLabel">ประกัน</label>
+                        <input type="text" id="pWarranty"
+                            class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white"
+                            placeholder="เช่น 1Y, 2Y, 3Y">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit"
+                        class="flex-1 bg-cyan-500 text-slate-950 font-bold py-2 rounded text-xs hover:bg-cyan-400 transition"
+                        data-i18n="saveBtn">บันทึกข้อมูลสินค้า</button>
+                    <button type="button" onclick="resetAdminForm()"
+                        class="bg-slate-700 text-gray-200 font-bold px-4 py-2 rounded text-xs hover:bg-slate-600 transition"
+                        data-i18n="cancelBtn">ยกเลิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Footer Section -->
+    <footer class="bg-slate-900 border-t border-slate-800 text-gray-400 text-xs mt-16 relative z-10">
+        <!-- Upper Footer: Team Members Section (8 คน) -->
+        <div class="max-w-7xl mx-auto px-4 py-10 border-b border-slate-800/80">
+            <div class="flex items-center gap-2 mb-6">
+                <div class="w-1.5 h-6 bg-cyan-400 rounded-full"></div>
+                <h3 class="text-lg font-bold text-white tracking-wide">สมาชิก</h3>
+            </div>
+
+            <!-- Team Grid Responsive: มือถือ 2 คอลัมน์, แท็บเล็ต 4 คอลัมน์, จอใหญ่ 8 คอลัมน์ -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+
+                <!-- สมาชิกคนที่ 1 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/pro.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+1&background=0D8ABC&color=fff'"
+                            alt="Member 1" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชินวุฒิ แรกคำนวน</span>
+                    <span class="text-[10px] text-gray-500 mb-2">Dev / Role</span>
+                    <a href="https://www.instagram.com/drakmode._/" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 2 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/นฤเบศร.png" alt="Member 2" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">นฤเบศร เครือวัลย์</span>
+                    <span class="text-[10px] text-gray-500 mb-2">dev / Role</span>
+                    <a href="https://www.instagram.com/nirmlsaenhla/" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 3 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/team3.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+3&background=0D8ABC&color=fff'"
+                            alt="Member 3" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชื่อ-นามสกุล 3</span>
+                    <span class="text-[10px] text-gray-500 mb-2">ตำแหน่ง / Role</span>
+                    <a href="https://instagram.com/your_ig_3" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 4 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/team4.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+4&background=0D8ABC&color=fff'"
+                            alt="Member 4" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชื่อ-นามสกุล 4</span>
+                    <span class="text-[10px] text-gray-500 mb-2">ตำแหน่ง / Role</span>
+                    <a href="https://instagram.com/your_ig_4" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 5 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/team5.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+5&background=0D8ABC&color=fff'"
+                            alt="Member 5" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชื่อ-นามสกุล 5</span>
+                    <span class="text-[10px] text-gray-500 mb-2">ตำแหน่ง / Role</span>
+                    <a href="https://instagram.com/your_ig_5" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 6 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/team6.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+6&background=0D8ABC&color=fff'"
+                            alt="Member 6" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชื่อ-นามสกุล 6</span>
+                    <span class="text-[10px] text-gray-500 mb-2">ตำแหน่ง / Role</span>
+                    <a href="https://instagram.com/your_ig_6" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 7 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/team7.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+7&background=0D8ABC&color=fff'"
+                            alt="Member 7" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชื่อ-นามสกุล 7</span>
+                    <span class="text-[10px] text-gray-500 mb-2">ตำแหน่ง / Role</span>
+                    <a href="https://instagram.com/your_ig_7" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+                <!-- สมาชิกคนที่ 8 -->
+                <div
+                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    <div
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        <img src="photo/team8.jpg"
+                            onerror="this.src='https://ui-avatars.com/api/?name=Member+8&background=0D8ABC&color=fff'"
+                            alt="Member 8" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-bold text-white text-xs truncate w-full">ชื่อ-นามสกุล 8</span>
+                    <span class="text-[10px] text-gray-500 mb-2">ตำแหน่ง / Role</span>
+                    <a href="https://instagram.com/your_ig_8" target="_blank"
+                        class="w-full py-1 rounded-lg bg-pink-500/10 hover:bg-pink-600 text-pink-400 hover:text-white border border-pink-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition">
+                        <i class="fa-brands fa-instagram text-xs"></i> IG
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Main Footer Info Section -->
+        <div class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-5 gap-8">
+            <!-- Brand Info Column -->
+            <div class="md:col-span-2 space-y-3">
+                <a href="#" class="text-2xl font-black italic tracking-wider text-white">
+                    COM <span class="text-cyan-400">PANG</span>
+                </a>
+                <p class="text-xs text-gray-400 leading-relaxed max-w-sm">
+                    ถ้าคุณชอบคอมพิวเตอร์ เราคือเพื่อนกัน COM PANG ศูนย์รวมคอมพิวเตอร์ประกอบ อุปกรณ์เกมมิ่งเกียร์
+                    โน้ตบุ๊ก สินค้าไอทีชั้นนำ รับประกันศูนย์ไทยทุกชิ้น บริการจัดสเปกตามงบประมาณที่คุณเลือกได้เอง
+                </p>
+            </div>
+
+            <!-- Contact Team: อีเมล/เบอร์โทรทีมงานทั้ง 8 คน แทนคอลัมน์หมวดหมู่/บริการ/ติดต่อร้านค้าเดิม -->
+            <div class="md:col-span-3 space-y-3">
+                <h4 class="font-bold text-white text-sm mb-3 border-l-2 border-cyan-400 pl-2">ติดต่อทีมงาน</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชินวุฒิ แรกคำนวน</p>
+                            <a href="mailto:chinawut@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> chinawut@compang.com</a>
+                            <a href="tel:0801111111" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-111-1111</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">นฤเบศร เครือวัลย์</p>
+                            <a href="mailto:narubet@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> narubet@compang.com</a>
+                            <a href="tel:0802222222" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-222-2222</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชื่อ-นามสกุล 3</p>
+                            <a href="mailto:member3@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member3@compang.com</a>
+                            <a href="tel:0803333333" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-333-3333</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชื่อ-นามสกุล 4</p>
+                            <a href="mailto:member4@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member4@compang.com</a>
+                            <a href="tel:0804444444" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-444-4444</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชื่อ-นามสกุล 5</p>
+                            <a href="mailto:member5@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member5@compang.com</a>
+                            <a href="tel:0805555555" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-555-5555</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชื่อ-นามสกุล 6</p>
+                            <a href="mailto:member6@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member6@compang.com</a>
+                            <a href="tel:0806666666" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-666-6666</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชื่อ-นามสกุล 7</p>
+                            <a href="mailto:member7@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member7@compang.com</a>
+                            <a href="tel:0807777777" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-777-7777</a>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
+                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-[11px] truncate">ชื่อ-นามสกุล 8</p>
+                            <a href="mailto:member8@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member8@compang.com</a>
+                            <a href="tel:0808888888" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-888-8888</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+    </footer>
+
+
+    <!-- 1. โหลด Firebase SDK แบบ Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- 2. เชื่อมต่อฐานข้อมูลโดยใช้คีย์ของคุณ -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAY4czpcJHuanv65NyuZEx7v_KR06NnAVw",
+            authDomain: "compung-shop.firebaseapp.com",
+            projectId: "compung-shop",
+            storageBucket: "compung-shop.firebasestorage.app",
+            messagingSenderId: "389619507222",
+            appId: "1:389619507222:web:af1db8418b3c268a4c5537",
+            measurementId: "G-17CTJ5L7Y2"
+        };
+
+        // เริ่มต้นสร้างระบบ
+        firebase.initializeApp(firebaseConfig);
+
+        // ตัวแปร db สำหรับใช้อ่าน-เขียนข้อมูลสินค้า
+        const db = firebase.firestore();
+    </script>
+
+    <!-- ไฟล์ script.js เดิมของคุณจะอยู่ต่อท้ายตรงนี้ -->
+    <script src="script.js"></script>
+
+    <!-- Full-Screen Warning Modal with Random Insults -->
+    <div id="copyWarningModal"
+        class="fixed inset-0 bg-black/90 z-[9999] hidden flex-col items-center justify-center text-center p-4 backdrop-blur-md animate-pulse-red">
+        <div
+            class="bg-slate-900 border-2 border-red-600 rounded-2xl p-8 max-w-lg w-full shadow-[0_0_50px_rgba(239,68,68,0.5)] flex flex-col items-center animate-bounce-short">
+            <!-- ไอคอนสามเหลี่ยมเตือนสีแดง -->
+            <div class="text-red-500 text-7xl mb-4 animate-pulse">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-red-500 mb-2 tracking-wide">คำเตือน!</h2>
+
+            <!-- ข้อความคำด่า (จะถูกเปลี่ยนแบบสุ่มผ่าน JS) -->
+            <p id="warningTextDisplay"
+                class="text-xl font-bold text-white mb-6 min-h-[60px] flex items-center justify-center">
+                พวกขี้ก็อป สวะ กันคนก็อปเว็บ
+            </p>
+
+            <div class="flex gap-3 w-full justify-center">
+                <button onclick="randomizeWarningText()"
+                    class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-5 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-dice"></i> สุ่มคำด่าใหม่
+                </button>
+                <button onclick="closeCopyWarning()"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95">
+                    รับทราบและปิด
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
