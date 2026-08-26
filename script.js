@@ -1251,9 +1251,10 @@ function renderOrderHistory() {
 // AUTH & USER DATABASE SYSTEM
 // ==========================================
 let authMode = 'login';
-let users = [
-    { username: "admin", email: "admin@example.com", password: "123" }
-];
+
+// สถานะผู้ใช้ปัจจุบัน (มาจาก Firebase Auth + Firestore)
+let currentUser = null;       // Firebase Auth user object (uid, email)
+let currentUserData = null;   // ข้อมูลโปรไฟล์จาก Firestore (users/{uid})
 
 function toggleAuthModal() {
     const modal = document.getElementById('authModal');
@@ -1266,9 +1267,9 @@ function toggleAuthModal() {
 function resetAuthForm() {
     authMode = 'login';
     document.getElementById('authForm').reset();
-    document.getElementById('usernameContainer').classList.remove('hidden');
+    const registerFields = document.getElementById('registerFieldsContainer');
+    if (registerFields) registerFields.classList.add('hidden');
     document.getElementById('passwordContainer').classList.remove('hidden');
-    document.getElementById('emailContainer').classList.add('hidden');
     document.getElementById('authToggleFooter').classList.remove('hidden');
     updateAuthUI();
 }
@@ -1280,80 +1281,140 @@ function switchAuthMode() {
 
 function updateAuthUI() {
     const title = document.getElementById('authTitle');
-    const emailContainer = document.getElementById('emailContainer');
+    const registerFields = document.getElementById('registerFieldsContainer');
     const submitBtn = document.getElementById('authSubmitBtn');
     const toggleText = document.getElementById('authToggleText');
     const btnToggle = document.getElementById('authBtnToggle');
 
     if (authMode === 'login') {
         title.innerText = translations[currentLang].loginTitle;
-        emailContainer.classList.add('hidden');
+        if (registerFields) registerFields.classList.add('hidden');
         submitBtn.innerText = translations[currentLang].submitBtn;
         toggleText.innerText = translations[currentLang].noAccountText;
         btnToggle.innerText = translations[currentLang].registerToggleBtn;
     } else if (authMode === 'register') {
         title.innerText = translations[currentLang].registerTitle;
-        emailContainer.classList.remove('hidden');
+        if (registerFields) registerFields.classList.remove('hidden');
         submitBtn.innerText = translations[currentLang].submitBtn;
         toggleText.innerText = translations[currentLang].hasAccountText;
         btnToggle.innerText = translations[currentLang].loginToggleBtn;
     }
 }
 
-function handleAuth(e) {
+// แปล error code ของ Firebase Auth ให้เป็นข้อความที่คนอ่านเข้าใจ
+function getAuthErrorMessage(error) {
+    const isTh = currentLang === 'th';
+    switch (error.code) {
+        case 'auth/email-already-in-use':
+            return isTh ? 'อีเมลนี้มีผู้ใช้งานในระบบแล้ว' : 'This email is already registered.';
+        case 'auth/invalid-email':
+            return isTh ? 'รูปแบบอีเมลไม่ถูกต้อง' : 'Invalid email format.';
+        case 'auth/weak-password':
+            return isTh ? 'รหัสผ่านสั้นเกินไป (ต้องมีอย่างน้อย 6 ตัวอักษร)' : 'Password is too weak (minimum 6 characters).';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return isTh ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : 'Invalid email or password.';
+        default:
+            return (isTh ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + error.message;
+    }
+}
+
+async function handleAuth(e) {
     e.preventDefault();
 
-    const usernameInput = document.getElementById('authUsername').value.trim();
-    const passwordInput = document.getElementById('authPassword').value;
     const emailInput = document.getElementById('authEmail').value.trim();
+    const passwordInput = document.getElementById('authPassword').value;
+    const submitBtn = document.getElementById('authSubmitBtn');
 
+    // ---------- สมัครสมาชิก ----------
     if (authMode === 'register') {
-        const isExist = users.some(u => u.username === usernameInput || u.email === emailInput);
-        if (isExist) {
-            alert(currentLang === 'th' ? 'ชื่อผู้ใช้หรืออีเมลนี้มีอยู่ในระบบแล้ว!' : 'Username or Email already exists!');
-            return;
+        const firstNameInput = document.getElementById('authFirstName').value.trim();
+        const lastNameInput = document.getElementById('authLastName').value.trim();
+        const phoneInput = document.getElementById('authPhone').value.trim();
+        const addressInput = document.getElementById('authAddress').value.trim();
+
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+            // 1. สร้างบัญชีจริงใน Firebase Authentication
+            const cred = await auth.createUserWithEmailAndPassword(emailInput, passwordInput);
+            const uid = cred.user.uid;
+
+            // 2. สร้างเอกสารโปรไฟล์ผู้ใช้ใน Firestore (role เริ่มต้นเป็น "user" เสมอ)
+            await db.collection('users').doc(uid).set({
+                firstName: firstNameInput,
+                lastName: lastNameInput,
+                email: emailInput,
+                phone: phoneInput,
+                address: addressInput,
+                role: 'user',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert(currentLang === 'th'
+                ? 'สมัครสมาชิกสำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว'
+                : 'Registration successful! You are now logged in.');
+            toggleAuthModal();
+        } catch (error) {
+            alert(getAuthErrorMessage(error));
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
-
-        users.push({
-            username: usernameInput,
-            email: emailInput,
-            password: passwordInput
-        });
-
-        alert(currentLang === 'th' ? 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ' : 'Registration successful! Please log in.');
-        authMode = 'login';
-        resetAuthForm();
         return;
     }
 
+    // ---------- เข้าสู่ระบบ ----------
     if (authMode === 'login') {
-        const userMatch = users.find(u =>
-            (u.username === usernameInput || u.email === usernameInput) && u.password === passwordInput
-        );
-
-        if (!userMatch) {
-            alert(currentLang === 'th' ? 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง!' : 'Invalid username/email or password!');
-            return;
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+            await auth.signInWithEmailAndPassword(emailInput, passwordInput);
+            toggleAuthModal();
+        } catch (error) {
+            alert(getAuthErrorMessage(error));
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
-
-        const userText = document.getElementById('userStatusText');
-        const logoutBtn = document.getElementById('logoutBtn');
-
-        if (userText) userText.innerText = userMatch.username;
-        if (logoutBtn) logoutBtn.classList.remove('hidden');
-
-        alert(currentLang === 'th' ? `ยินดีต้อนรับคุณ ${userMatch.username}` : `Welcome ${userMatch.username}`);
-        toggleAuthModal();
     }
 }
 
 function handleLogout() {
+    auth.signOut();
+}
+
+// อัปเดตหน้าเว็บตามสถานะล็อกอิน (ชื่อที่แสดง, ปุ่ม logout, ปุ่มจัดการสินค้าเฉพาะ admin)
+function updateUserUI(user, userData) {
     const userText = document.getElementById('userStatusText');
     const logoutBtn = document.getElementById('logoutBtn');
+    const adminBtns = document.querySelectorAll('.admin-only-btn');
 
-    if (userText) userText.innerText = translations[currentLang].loginRegister;
-    if (logoutBtn) logoutBtn.classList.add('hidden');
+    if (user && userData) {
+        if (userText) userText.innerText = userData.firstName || userData.email;
+        if (logoutBtn) logoutBtn.classList.remove('hidden');
+        const isAdmin = userData.role === 'admin';
+        adminBtns.forEach(btn => btn.classList.toggle('hidden', !isAdmin));
+    } else {
+        if (userText) userText.innerText = translations[currentLang].loginRegister;
+        if (logoutBtn) logoutBtn.classList.add('hidden');
+        adminBtns.forEach(btn => btn.classList.add('hidden'));
+    }
 }
+
+// ตรวจสอบสถานะการล็อกอินทุกครั้งที่โหลดหน้า (คงสถานะไว้แม้รีเฟรชหน้าหรือสลับไปหน้าอื่น)
+auth.onAuthStateChanged(async (user) => {
+    currentUser = user;
+    if (user) {
+        try {
+            const doc = await db.collection('users').doc(user.uid).get();
+            currentUserData = doc.exists ? doc.data() : null;
+        } catch (error) {
+            console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
+            currentUserData = null;
+        }
+    } else {
+        currentUserData = null;
+    }
+    updateUserUI(currentUser, currentUserData);
+});
 
 // ==========================================
 // HERO BANNER SLIDER SYSTEM
