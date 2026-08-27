@@ -579,10 +579,6 @@ function renderProducts(items, gridId = 'productGrid') {
             <button onclick="event.stopPropagation(); addToCart(${p.id})" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
                 <i class="fa-solid fa-cart-shopping"></i> ${translations[currentLang].buyNow}
             </button>
-
-            <div class="text-center text-[10px] text-gray-500 mt-2 flex items-center justify-center gap-1">
-                <i class="fa-regular fa-eye"></i> ${soldLabel}
-            </div>
         </div>
     `;
     }).join('');
@@ -742,10 +738,6 @@ function renderGamingGearGrid() {
             <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
                 <i class="fa-solid fa-cart-shopping"></i> ${translations[currentLang].buyNow}
             </button>
-
-            <div class="text-center text-[10px] text-gray-500 mt-2 flex items-center justify-center gap-1">
-                <i class="fa-regular fa-eye"></i> ${soldLabel}
-            </div>
         </div>
     `;
     }).join('');

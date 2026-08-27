@@ -10,15 +10,112 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* ===================== */
+        /* Page Loader Animation */
+        /* ===================== */
+        #pageLoader {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            background: radial-gradient(ellipse at center, #0b1526 0%, #020617 75%);
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #pageLoader.loader-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .loader-ring-wrap {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loader-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            border: 3px solid transparent;
+        }
+        .loader-ring--1 {
+            border-top-color: #22d3ee;
+            border-right-color: #22d3ee;
+            animation: loader-spin 1.1s linear infinite;
+        }
+        .loader-ring--2 {
+            inset: 14px;
+            border-bottom-color: #ffffff;
+            border-left-color: #ffffff;
+            opacity: 0.85;
+            animation: loader-spin-rev 0.9s linear infinite;
+        }
+        .loader-core {
+            width: 20px;
+            height: 20px;
+            border-radius: 9999px;
+            background: #ffffff;
+            box-shadow: 0 0 12px 4px rgba(34, 211, 238, 0.9), 0 0 24px 10px rgba(34, 211, 238, 0.5);
+            animation: loader-pulse 1.2s ease-in-out infinite;
+        }
+        .loader-text {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: 0.12em;
+            font-size: 1.1rem;
+            color: #ffffff;
+        }
+        .loader-text span {
+            color: #22d3ee;
+        }
+        .loader-dots::after {
+            content: '';
+            display: inline-block;
+            width: 1.4em;
+            text-align: left;
+            animation: loader-dots 1.2s steps(4, end) infinite;
+        }
+        @keyframes loader-spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes loader-spin-rev {
+            to { transform: rotate(-360deg); }
+        }
+        @keyframes loader-pulse {
+            0%, 100% { transform: scale(0.85); opacity: 0.7; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+        @keyframes loader-dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+    </style>
     <link rel="icon" type="image/x-icon" href="icon/favicon.ico">
 </head>
 
 <body data-category="flashdrive"
     class="bg-slate-950 text-gray-100 font-sans antialiased transition-colors duration-300">
-    <div id="pageLoader">
-        <div class="page-loader-logo">COM <span>PANG</span></div>
-        <div class="page-loader-spinner" aria-hidden="true"></div>
-        <div class="page-loader-text">กำลังโหลด...</div>
+    <div id="pageLoader" aria-hidden="true">
+        <div class="loader-ring-wrap">
+            <div class="loader-ring loader-ring--1"></div>
+            <div class="loader-ring loader-ring--2"></div>
+            <div class="loader-core"></div>
+        </div>
+        <div class="loader-text">COM <span>PANG</span></div>
+        <div class="loader-text loader-dots" style="font-size:0.75rem; font-weight:600; font-style:normal; letter-spacing:0.05em; color:#94a3b8;">กำลังโหลด</div>
     </div>
 
     <div class="snow-container" aria-hidden="true">
