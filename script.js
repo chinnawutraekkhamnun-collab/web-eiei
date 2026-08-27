@@ -31,13 +31,39 @@ async function fetchProductsFromFirebase() {
         }
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการดึงข้อมูลจาก Firebase:", error);
+    } finally {
+        hidePageLoader();
     }
 }
 
 // ==========================================
+// PAGE LOADER (Animation ตอนกำลังโหลดหน้าเว็บ)
+// ==========================================
+let pageLoaderHidden = false;
+const pageLoaderStartTime = Date.now();
+const PAGE_LOADER_MIN_DURATION = 600; // แสดงแอนิเมชันอย่างน้อย 0.6 วิ กันกระพริบเร็วเกินไป
+function hidePageLoader() {
+    if (pageLoaderHidden) return;
+    pageLoaderHidden = true;
+
+    const elapsed = Date.now() - pageLoaderStartTime;
+    const remaining = Math.max(PAGE_LOADER_MIN_DURATION - elapsed, 0);
+
+    setTimeout(() => {
+        const loader = document.getElementById('pageLoader');
+        if (loader) {
+            loader.classList.add('loader-hidden');
+            setTimeout(() => loader.remove(), 600);
+        }
+    }, remaining);
+}
+// กันเหนียว: ถ้าโหลดข้อมูลนานผิดปกติหรือเกิดปัญหาอื่น ให้ปิด loader อัตโนมัติหลังผ่านไป 5 วินาที
+setTimeout(hidePageLoader, 5000);
+
+// ==========================================
 // i18n TRANSLATION SYSTEM (ระบบสลับภาษา 4 ภาษา)
 // ==========================================
-let currentLang = 'th';
+let currentLang = localStorage.getItem('compang_lang') || 'th';
 
 // รายการลำดับการสลับภาษา
 const langOrder = ['th', 'en', 'zh', 'ru'];
@@ -415,10 +441,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-function toggleLanguage() {
-    const nextIndex = (langOrder.indexOf(currentLang) + 1) % langOrder.length;
-    currentLang = langOrder[nextIndex];
-
+// อัปเดตข้อความบนหน้าเว็บทั้งหมดให้ตรงกับ currentLang (ใช้ทั้งตอนเปลี่ยนภาษาและตอนโหลดหน้าใหม่)
+function applyLanguageToDOM() {
     const langLabel = document.getElementById('langLabel');
     if (langLabel) {
         langLabel.innerText = currentLang.toUpperCase();
@@ -454,6 +478,21 @@ function toggleLanguage() {
         renderOrderHistory();
     }
 }
+
+function toggleLanguage() {
+    const nextIndex = (langOrder.indexOf(currentLang) + 1) % langOrder.length;
+    currentLang = langOrder[nextIndex];
+
+    // จำภาษาที่เลือกไว้ใน localStorage เพื่อให้ใช้ภาษาเดิมต่อเนื่องทุกหน้า ไม่ต้องกดเปลี่ยนใหม่
+    localStorage.setItem('compang_lang', currentLang);
+
+    applyLanguageToDOM();
+}
+
+// ตอนโหลดหน้าเว็บ (ทุกหน้า) ให้ดึงภาษาที่เคยเลือกไว้จาก localStorage มาใช้ทันที
+document.addEventListener('DOMContentLoaded', () => {
+    applyLanguageToDOM();
+});
 
 // ==========================================
 // PRODUCT RENDER & FILTER SYSTEM
@@ -535,10 +574,6 @@ function renderProducts(items, gridId = 'productGrid') {
 
             <div class="flex items-center justify-between mb-2.5">
                 ${hasDiscount ? `<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">-฿${discountAmount.toLocaleString()}</span>` : `<span class="text-[10px] text-gray-500">*ราคาเฉพาะออนไลน์</span>`}
-                <div class="flex gap-2 text-gray-400">
-                    <button onclick="event.stopPropagation()" title="เพิ่มในรายการโปรด" class="hover:text-red-400 transition text-sm"><i class="fa-regular fa-heart"></i></button>
-                    <button onclick="event.stopPropagation()" title="เปรียบเทียบ" class="hover:text-cyan-400 transition text-sm"><i class="fa-solid fa-arrows-rotate"></i></button>
-                </div>
             </div>
 
             <button onclick="event.stopPropagation(); addToCart(${p.id})" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
