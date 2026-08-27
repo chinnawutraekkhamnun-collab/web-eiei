@@ -458,13 +458,11 @@ function toggleLanguage() {
 // ==========================================
 // PRODUCT RENDER & FILTER SYSTEM
 // ==========================================
-let cart = [];
+let cart = [];                // ตะกร้าสินค้าปัจจุบัน (sync กับ field "cart" ใน users/{uid} บน Firestore)
 
 // ระบบประวัติการซื้อสินค้า (Order History)
-// หมายเหตุ: ตอนนี้ยังไม่มีระบบฐานข้อมูลผูกกับบัญชีผู้ใช้ จึงเก็บไว้ใน localStorage
-// ของเบราว์เซอร์ไปก่อนเป็นการชั่วคราว เมื่อทำระบบฐานข้อมูลบัญชีผู้ใช้เสร็จแล้ว
-// ค่อยเปลี่ยนมาบันทึก/ดึงข้อมูลจากฐานข้อมูลจริงแทนจุดนี้
-let orderHistory = loadOrderHistory();
+// เก็บจริงใน Firestore ที่ users/{uid}/orders — โหลดผ่าน loadOrderHistoryFromFirestore()
+let orderHistory = [];
 let currentCartTab = 'cart';
 let currentCategory = 'all';
 let currentBrand = 'all';
@@ -496,6 +494,7 @@ function renderProducts(items, gridId = 'productGrid') {
         return `
         <div onclick="goToProduct('${p.id}')" class="product-card cursor-pointer w-64 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col hover:border-cyan-500/60 hover:-translate-y-1 transition-all duration-300 group shadow-lg relative">
 
+            ${isCurrentUserAdmin() ? `
             <div class="absolute top-3 right-3 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition duration-200">
                 <button onclick="event.stopPropagation(); editProduct(${p.id})" title="แก้ไข" class="bg-slate-950/80 hover:bg-amber-500 hover:text-slate-950 text-amber-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
                     <i class="fa-solid fa-pen-to-square"></i>
@@ -503,7 +502,7 @@ function renderProducts(items, gridId = 'productGrid') {
                 <button onclick="event.stopPropagation(); deleteProduct(${p.id})" title="ลบสินค้า" class="bg-slate-950/80 hover:bg-red-500 hover:text-white text-red-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
-            </div>
+            </div>` : ''}
 
             <div class="flex justify-between items-center mb-1">
                 <span class="text-[10px] font-bold text-cyan-500 uppercase tracking-wide">${p.brand}</span>
@@ -661,6 +660,7 @@ function renderGamingGearGrid() {
         return `
         <div onclick="goToProduct('${p.id}')" class="product-card cursor-pointer w-full bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col hover:border-cyan-500/60 hover:-translate-y-1 transition-all duration-300 group shadow-lg relative">
 
+            ${isCurrentUserAdmin() ? `
             <div class="absolute top-3 right-3 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition duration-200">
             <button onclick="event.stopPropagation(); editProduct('${p.id}')" title="แก้ไข" class="bg-slate-950/80 hover:bg-amber-500 hover:text-slate-950 text-amber-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
                 <i class="fa-solid fa-pen-to-square"></i>
@@ -668,7 +668,7 @@ function renderGamingGearGrid() {
                 <button onclick="event.stopPropagation(); deleteProduct('${p.id}')" title="ลบสินค้า" class="bg-slate-950/80 hover:bg-red-500 hover:text-white text-red-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
-            </div>
+            </div>` : ''}
 
             <div class="flex justify-between items-center mb-1">
                 <span class="text-[10px] font-bold text-cyan-500 uppercase tracking-wide">${p.brand}</span>
@@ -928,6 +928,8 @@ function changeDetailQty(delta) {
 
 // เพิ่มสินค้าจากหน้ารายละเอียดลงตะกร้าตามจำนวนที่เลือก
 function addToCartFromDetail(productId) {
+    if (!requireLoginForCart()) return;
+
     const qtyInput = document.getElementById('detailQty');
     const qty = qtyInput ? Math.max(1, parseInt(qtyInput.value) || 1) : 1;
     const product = products.find(p => String(p.id) === String(productId));
@@ -942,6 +944,7 @@ function addToCartFromDetail(productId) {
 
     updateCartCount();
     renderCartItems();
+    syncCartToFirestore();
     if (typeof toggleCartModal === 'function') toggleCartModal();
 }
 
@@ -1024,9 +1027,32 @@ function filterBrand(brand) {
 }
 
 // ==========================================
-// CART SYSTEM
+// CART SYSTEM (ผูกกับบัญชีผู้ใช้จริงใน Firestore)
 // ==========================================
+
+// เช็คว่า login อยู่ไหมก่อนใส่ตะกร้า/สั่งซื้อ ถ้ายังไม่ login จะเปิด modal ให้เข้าสู่ระบบ/สมัครสมาชิกก่อน
+function requireLoginForCart() {
+    if (currentUser) return true;
+    alert(currentLang === 'th'
+        ? 'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกก่อนทำการสั่งซื้อ'
+        : 'Please log in or register before adding items to your cart.');
+    toggleAuthModal();
+    return false;
+}
+
+// บันทึกตะกร้าปัจจุบันกลับไปที่ Firestore (users/{uid}.cart) ทุกครั้งที่ตะกร้าเปลี่ยนแปลง
+async function syncCartToFirestore() {
+    if (!currentUser) return;
+    try {
+        await db.collection('users').doc(currentUser.uid).update({ cart: cart });
+    } catch (error) {
+        console.error('บันทึกตะกร้าสินค้าไปยัง Firestore ไม่สำเร็จ:', error);
+    }
+}
+
 function addToCart(productId) {
+    if (!requireLoginForCart()) return;
+
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
@@ -1039,6 +1065,7 @@ function addToCart(productId) {
 
     updateCartCount();
     renderCartItems();
+    syncCartToFirestore();
 }
 
 function updateCartCount() {
@@ -1094,6 +1121,7 @@ function changeQuantity(id, delta) {
     } else {
         updateCartCount();
         renderCartItems();
+        syncCartToFirestore();
     }
 }
 
@@ -1101,6 +1129,7 @@ function removeFromCart(id) {
     cart = cart.filter(i => i.id !== id);
     updateCartCount();
     renderCartItems();
+    syncCartToFirestore();
 }
 
 function toggleCartModal() {
@@ -1111,59 +1140,76 @@ function toggleCartModal() {
     }
 }
 
-function checkout() {
+async function checkout() {
+    if (!requireLoginForCart()) return;
+
     if (cart.length === 0) {
         alert(currentLang === 'th' ? 'กรุณาเลือกสินค้าก่อนทำการสั่งซื้อ' : 'Please select products before checkout.');
         return;
     }
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) checkoutBtn.disabled = true;
 
-    // บันทึกคำสั่งซื้อลงในประวัติการซื้อสินค้า (ระบบชั่วคราว ยังไม่ผูกกับฐานข้อมูลบัญชีผู้ใช้)
-    const order = {
-        orderId: 'ORD' + Date.now(),
-        date: new Date().toISOString(),
-        items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            img: item.img,
-            price: item.price,
-            quantity: item.quantity
-        })),
-        total: total,
-        status: 'completed'
-    };
-    orderHistory.unshift(order);
-    saveOrderHistory();
+    try {
+        // บันทึกคำสั่งซื้อจริงลงใน Firestore ที่ users/{uid}/orders
+        await db.collection('users').doc(currentUser.uid).collection('orders').add({
+            items: cart.map(item => ({
+                id: item.id,
+                name: item.name,
+                img: item.img,
+                price: item.price,
+                quantity: item.quantity
+            })),
+            total: total,
+            status: 'completed',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-    alert(currentLang === 'th' ? 'สั่งซื้อสินค้าเรียบร้อยแล้ว! ขอบคุณที่ใช้บริการ COMPUNG' : 'Order placed successfully! Thank you for using COMPUNG.');
-    cart = [];
-    updateCartCount();
-    renderCartItems();
-    renderOrderHistory();
-    toggleCartModal();
+        cart = [];
+        await syncCartToFirestore();
+        await loadOrderHistoryFromFirestore();
+
+        alert(currentLang === 'th' ? 'สั่งซื้อสินค้าเรียบร้อยแล้ว! ขอบคุณที่ใช้บริการ COMPUNG' : 'Order placed successfully! Thank you for using COMPUNG.');
+        updateCartCount();
+        renderCartItems();
+        renderOrderHistory();
+        toggleCartModal();
+    } catch (error) {
+        console.error('บันทึกคำสั่งซื้อไม่สำเร็จ:', error);
+        alert(currentLang === 'th' ? 'เกิดข้อผิดพลาดในการสั่งซื้อ กรุณาลองใหม่อีกครั้ง' : 'Something went wrong placing your order. Please try again.');
+    } finally {
+        if (checkoutBtn) checkoutBtn.disabled = false;
+    }
 }
 
 // ==========================================
 // ORDER HISTORY SYSTEM (ประวัติการซื้อสินค้า)
 // ==========================================
-// เก็บข้อมูลไว้ใน localStorage ของเบราว์เซอร์เป็นการชั่วคราวก่อน
-// รอจนกว่าจะมีระบบฐานข้อมูลผูกกับบัญชีผู้ใช้จริง ค่อยย้ายไปเก็บที่ฐานข้อมูลแทน
-function loadOrderHistory() {
-    try {
-        const saved = localStorage.getItem('compang_orderHistory');
-        return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-        console.error('ไม่สามารถโหลดประวัติการสั่งซื้อได้', e);
-        return [];
+// โหลดประวัติการสั่งซื้อจริงจาก Firestore ที่ users/{uid}/orders (เรียงล่าสุดก่อน)
+async function loadOrderHistoryFromFirestore() {
+    if (!currentUser) {
+        orderHistory = [];
+        return;
     }
-}
-
-function saveOrderHistory() {
     try {
-        localStorage.setItem('compang_orderHistory', JSON.stringify(orderHistory));
-    } catch (e) {
-        console.error('ไม่สามารถบันทึกประวัติการสั่งซื้อได้', e);
+        const snapshot = await db.collection('users').doc(currentUser.uid)
+            .collection('orders').orderBy('createdAt', 'desc').get();
+
+        orderHistory = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                orderId: doc.id,
+                date: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                items: data.items || [],
+                total: data.total || 0,
+                status: data.status || 'completed'
+            };
+        });
+    } catch (error) {
+        console.error('โหลดประวัติการสั่งซื้อจาก Firestore ไม่สำเร็จ:', error);
+        orderHistory = [];
     }
 }
 
@@ -1255,6 +1301,13 @@ let authMode = 'login';
 // สถานะผู้ใช้ปัจจุบัน (มาจาก Firebase Auth + Firestore)
 let currentUser = null;       // Firebase Auth user object (uid, email)
 let currentUserData = null;   // ข้อมูลโปรไฟล์จาก Firestore (users/{uid})
+
+// ตรวจสอบว่าผู้ใช้ปัจจุบัน "ล็อกอินแล้ว" และมี role เป็น admin จริงๆ หรือไม่
+// ใช้ตรวจก่อนแสดงปุ่มแก้ไข/ลบ และก่อนอนุญาตให้เรียกฟังก์ชันแก้ไข/ลบสินค้า
+// หมายเหตุ: นี่คือการป้องกันฝั่ง UI เท่านั้น การป้องกันจริงต้องทำที่ Firestore Security Rules ด้วย
+function isCurrentUserAdmin() {
+    return !!(currentUser && currentUserData && currentUserData.role === 'admin');
+}
 
 function toggleAuthModal() {
     const modal = document.getElementById('authModal');
@@ -1378,7 +1431,74 @@ async function handleAuth(e) {
 }
 
 function handleLogout() {
+    const confirmMsg = currentLang === 'th'
+        ? 'ยืนยันออกจากระบบใช่ไหม?'
+        : 'Are you sure you want to log out?';
+
+    if (!confirm(confirmMsg)) return;
+
     auth.signOut();
+}
+
+// ==========================================
+// PROFILE SYSTEM (ดู/แก้ไขข้อมูลส่วนตัว)
+// ==========================================
+
+// กดที่ชื่อ/ไอคอนบัญชี: login อยู่แล้ว -> เปิดหน้าข้อมูลส่วนตัว, ยังไม่ login -> เปิด modal เข้าสู่ระบบ
+function handleAccountClick() {
+    if (currentUser) {
+        openProfileModal();
+    } else {
+        toggleAuthModal();
+    }
+}
+
+function openProfileModal() {
+    if (!currentUser || !currentUserData) return;
+
+    document.getElementById('profileFirstName').value = currentUserData.firstName || '';
+    document.getElementById('profileLastName').value = currentUserData.lastName || '';
+    document.getElementById('profileEmail').value = currentUserData.email || currentUser.email || '';
+    document.getElementById('profilePhone').value = currentUserData.phone || '';
+    document.getElementById('profileAddress').value = currentUserData.address || '';
+
+    const modal = document.getElementById('profileModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function saveProfile(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const saveBtn = document.getElementById('profileSaveBtn');
+    const updatedData = {
+        firstName: document.getElementById('profileFirstName').value.trim(),
+        lastName: document.getElementById('profileLastName').value.trim(),
+        phone: document.getElementById('profilePhone').value.trim(),
+        address: document.getElementById('profileAddress').value.trim()
+    };
+
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+        await db.collection('users').doc(currentUser.uid).update(updatedData);
+
+        // อัปเดตข้อมูลในเครื่องให้ตรงกับที่บันทึกไป โดยไม่กระทบ field อื่น เช่น role และ cart
+        currentUserData = { ...currentUserData, ...updatedData };
+        updateUserUI(currentUser, currentUserData);
+
+        alert(currentLang === 'th' ? 'บันทึกข้อมูลเรียบร้อยแล้ว' : 'Profile updated successfully.');
+        closeProfileModal();
+    } catch (error) {
+        console.error('บันทึกข้อมูลส่วนตัวไม่สำเร็จ:', error);
+        alert(currentLang === 'th' ? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง' : 'Something went wrong saving your profile. Please try again.');
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 }
 
 // อัปเดตหน้าเว็บตามสถานะล็อกอิน (ชื่อที่แสดง, ปุ่ม logout, ปุ่มจัดการสินค้าเฉพาะ admin)
@@ -1410,10 +1530,36 @@ auth.onAuthStateChanged(async (user) => {
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
             currentUserData = null;
         }
+
+        // โหลดตะกร้าสินค้าที่เคยบันทึกไว้ของบัญชีนี้กลับมา
+        cart = (currentUserData && Array.isArray(currentUserData.cart)) ? currentUserData.cart : [];
+
+        // โหลดประวัติการสั่งซื้อของบัญชีนี้
+        await loadOrderHistoryFromFirestore();
     } else {
         currentUserData = null;
+        cart = [];
+        orderHistory = [];
     }
+
     updateUserUI(currentUser, currentUserData);
+    if (typeof updateCartCount === 'function') updateCartCount();
+    if (typeof renderCartItems === 'function') renderCartItems();
+    if (typeof renderOrderHistory === 'function') renderOrderHistory();
+
+    // เรนเดอร์การ์ดสินค้าใหม่ทุกครั้งที่สถานะล็อกอิน/สิทธิ์ admin เปลี่ยน
+    // เพื่อให้ปุ่มแก้ไข/ลบ แสดงเฉพาะ admin เท่านั้น (ไม่ค้างจากตอนยังไม่ได้ล็อกอิน)
+    if (products.length > 0) {
+        if (typeof renderProducts === 'function') {
+            renderProducts(products, 'allProductsGrid');
+        }
+        if (typeof renderAllTypedSections === 'function') {
+            renderAllTypedSections();
+        }
+        if (typeof renderGamingGearGrid === 'function') {
+            renderGamingGearGrid();
+        }
+    }
 });
 
 // ==========================================
@@ -1613,6 +1759,12 @@ function resetAdminForm() {
 async function saveProduct(e) {
     if (e) e.preventDefault();
 
+    if (!isCurrentUserAdmin()) {
+        console.warn('บล็อก: ต้องเป็น admin เท่านั้นถึงจะบันทึก/เพิ่มสินค้าได้');
+        alert('คุณไม่มีสิทธิ์ทำรายการนี้');
+        return;
+    }
+
     const editId = document.getElementById('editProductId').value;
     let productIdNum;
 
@@ -1659,6 +1811,11 @@ async function saveProduct(e) {
 }
 
 function editProduct(id) {
+    if (!isCurrentUserAdmin()) {
+        console.warn('บล็อก: ต้องเป็น admin เท่านั้นถึงจะแก้ไขสินค้าได้');
+        return;
+    }
+
     const p = products.find(prod => String(prod.id) === String(id));
     if (!p) {
         console.error("ไม่พบข้อมูลสินค้า ID:", id);
@@ -1684,6 +1841,11 @@ function editProduct(id) {
 }
 
 async function deleteProduct(id) {
+    if (!isCurrentUserAdmin()) {
+        console.warn('บล็อก: ต้องเป็น admin เท่านั้นถึงจะลบสินค้าได้');
+        return;
+    }
+
     const confirmMsg = (typeof currentLang !== 'undefined' && currentLang === 'th')
         ? 'คุณต้องการลบสินค้านี้ใช่หรือไม่?'
         : 'Are you sure you want to delete this product?';

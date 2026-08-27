@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>COM PANG - Gaming & Hardware Store</title>
+    <title>COM PANG - หูฟัง | Gaming & Hardware Store</title>
     <!-- Tailwind CSS CDN & Font Awesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -49,7 +49,7 @@
                         class="p-2 rounded-lg bg-slate-800 text-yellow-400 border border-slate-700">
                         <i class="fa-solid fa-sun text-sm"></i>
                     </button>
-                    <button onclick="toggleAuthModal()"
+                    <button onclick="handleAccountClick()"
                         class="p-2 rounded-lg bg-slate-800 text-cyan-400 border border-slate-700">
                         <i class="fa-regular fa-user text-sm"></i>
                     </button>
@@ -83,7 +83,7 @@
 
                 <div class="flex items-center gap-3">
                     <div id="userInfoContainer" class="flex items-center gap-2">
-                        <button onclick="toggleAuthModal()"
+                        <button onclick="handleAccountClick()"
                             class="flex items-center gap-2 hover:text-cyan-400 text-sm font-medium transition">
                             <i class="fa-regular fa-user text-xl text-cyan-400"></i>
                             <span id="userStatusText" class="inline" data-i18n="loginRegister">เข้าสู่ระบบ /
@@ -369,7 +369,7 @@
                     <span data-i18n="totalPrice">ราคารวมทั้งหมด:</span>
                     <span id="cartTotalPrice" class="text-cyan-400 text-lg sm:text-xl font-black">฿0</span>
                 </div>
-                <button onclick="checkout()"
+                <button id="checkoutBtn" onclick="checkout()"
                     class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black py-2.5 sm:py-3 rounded-xl shadow-lg shadow-cyan-500/20 text-sm sm:text-base transition"
                     data-i18n="checkoutBtn">สั่งซื้อสินค้า</button>
             </div>
@@ -445,6 +445,56 @@
                     class="text-cyan-400 font-bold hover:underline ml-1"
                     data-i18n="registerToggleBtn">สมัครสมาชิก</button>
             </p>
+        </div>
+    </div>
+
+    <!-- Modal: Profile (ดู/แก้ไขข้อมูลส่วนตัว) -->
+    <div id="profileModal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex justify-center items-center p-3 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeProfileModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1"><i
+                    class="fa-solid fa-xmark text-lg sm:text-xl"></i></button>
+
+            <h3 class="text-lg sm:text-xl font-bold mb-5 text-center text-white">ข้อมูลส่วนตัว</h3>
+
+            <form id="profileForm" onsubmit="saveProfile(event)" class="space-y-3.5">
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1">ชื่อจริง</label>
+                        <input type="text" id="profileFirstName" required
+                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1">นามสกุล</label>
+                        <input type="text" id="profileLastName" required
+                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">อีเมล</label>
+                    <input type="email" id="profileEmail" disabled
+                        class="w-full p-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-xs sm:text-sm text-gray-400 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">เบอร์โทรศัพท์</label>
+                    <input type="tel" id="profilePhone"
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">ที่อยู่</label>
+                    <input type="text" id="profileAddress"
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                </div>
+
+                <button type="submit" id="profileSaveBtn"
+                    class="w-full bg-cyan-500 text-slate-950 font-bold py-2.5 rounded-lg hover:bg-cyan-400 text-xs sm:text-sm shadow-md transition">
+                    บันทึกการเปลี่ยนแปลง</button>
+            </form>
+
+            <button onclick="handleLogout(); closeProfileModal();"
+                class="w-full mt-3 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+            </button>
         </div>
     </div>
 
@@ -813,18 +863,6 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
-
-            <!-- Copyright Bar -->
-            <div class="bg-black/60 border-t border-slate-800 py-4 px-4 text-center text-[11px] text-gray-500">
-                <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-                    <p>Copyright © 2026 www.compang.com All rights reserved.</p>
-                    <div class="flex gap-4">
-                        <a href="#" class="hover:text-gray-300 transition">ข้อกำหนดและเงื่อนไข</a>
-                        <a href="#" class="hover:text-gray-300 transition">นโยบายความเป็นส่วนตัว</a>
-                        <a href="#" class="hover:text-gray-300 transition">การจัดการ Cookies</a>
-                    </div>
                 </div>
             </div>
     </footer>
