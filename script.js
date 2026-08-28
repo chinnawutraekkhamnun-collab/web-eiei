@@ -1176,8 +1176,355 @@ async function checkout() {
     }
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const orderRef = 'ORD' + Date.now().toString().slice(-8);
+
+    // เด้งไปหน้าจ่ายเงิน (QR Code) แทนการบันทึกคำสั่งซื้อทันที
+    openPaymentModal(total, orderRef);
+}
+
+// ==========================================
+// PAYMENT MODAL SYSTEM (หน้าจ่ายเงินจำลองด้วย QR Code + นับถอยหลัง 80 วิ)
+// ==========================================
+const PAYMENT_TIMEOUT_SECONDS = 80;
+let paymentCountdownInterval = null;
+let paymentAutoConfirmTimeout = null;
+let pendingCheckoutTotal = 0;
+let pendingOrderRef = '';
+
+// สร้าง Markup ของหน้าจ่ายเงินแบบไดนามิก (ไม่ต้องแก้ index.html)
+function ensurePaymentModalMarkup() {
+    if (document.getElementById('paymentModalOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'paymentModalOverlay';
+    overlay.className = 'hidden';
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0', zIndex: '9999',
+        background: 'rgba(2, 6, 23, 0.85)',
+        display: 'none', alignItems: 'center', justifyContent: 'center',
+        padding: '16px'
+    });
+
+    overlay.innerHTML = `
+        <div id="paymentModalBox" style="
+            background:#0f172a; border:1px solid #1e293b; border-radius:20px;
+            max-width:380px; width:100%; padding:28px 24px; text-align:center;
+            box-shadow:0 20px 60px rgba(0,0,0,0.5); position:relative;">
+
+            <button onclick="closePaymentModal(true)" style="
+                position:absolute; top:14px; right:14px; color:#94a3b8; background:none;
+                border:none; font-size:18px; cursor:pointer;">✕</button>
+
+            <h3 style="color:#fff; font-weight:800; font-size:18px; margin-bottom:4px;">สแกนจ่ายเงิน</h3>
+            <p style="color:#94a3b8; font-size:12px; margin-bottom:16px;">สแกน QR Code ด้วยแอปธนาคารของคุณ</p>
+
+            <div style="background:#fff; padding:12px; border-radius:16px; display:inline-block; margin-bottom:14px;">
+                <img id="paymentQrImage" src="" alt="QR Code ชำระเงิน" style="width:220px;height:220px;display:block;">
+            </div>
+
+            <p style="color:#22d3ee; font-weight:800; font-size:22px; margin-bottom:4px;" id="paymentModalAmount">฿0</p>
+            <p style="color:#64748b; font-size:11px; margin-bottom:16px;">รหัสอ้างอิง: <span id="paymentModalRef"></span></p>
+
+            <div style="background:#020617; border:1px solid #1e293b; border-radius:12px; padding:10px 14px; margin-bottom:16px;">
+                <p style="color:#94a3b8; font-size:11px; margin-bottom:2px;">กรุณาชำระเงินภายใน</p>
+                <p id="paymentCountdownText" style="color:#f87171; font-weight:800; font-size:26px; letter-spacing:1px;">01:20</p>
+            </div>
+
+            <div id="paymentStatusRow" style="display:flex; align-items:center; justify-content:center; gap:8px; color:#94a3b8; font-size:12px; margin-bottom:14px;">
+                <span style="width:8px;height:8px;border-radius:999px;background:#facc15; display:inline-block; animation:pmPulse 1s infinite;"></span>
+                <span>กำลังรอการชำระเงิน...</span>
+            </div>
+
+            <div id="paymentSlipSection" style="text-align:left;">
+                <label style="color:#94a3b8; font-size:11px; display:block; margin-bottom:6px;">แนบสลิปการโอนเงิน (รูปภาพ) เพื่อยืนยันการชำระเงิน</label>
+                <input type="file" id="paymentSlipInput" accept="image/*" style="display:none;" onchange="handleSlipSelected(event)">
+                <div id="paymentSlipDropzone" onclick="document.getElementById('paymentSlipInput').click()" style="
+                    border:2px dashed #334155; border-radius:12px; padding:16px; text-align:center;
+                    cursor:pointer; color:#64748b; font-size:12px;">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px; display:block; margin-bottom:6px;"></i>
+                    กดเพื่อแนบรูปสลิปการโอนเงิน
+                </div>
+                <img id="paymentSlipPreview" src="" style="display:none; width:100%; max-height:160px; object-fit:contain; border-radius:10px; margin-top:8px; border:1px solid #1e293b;">
+            </div>
+
+            <button id="paymentConfirmBtn" onclick="submitPaymentSlip()" disabled style="
+                width:100%; margin-top:14px; padding:12px; border-radius:12px; border:none;
+                background:#334155; color:#94a3b8; font-weight:800; font-size:14px; cursor:not-allowed;">
+                ยืนยันการชำระเงิน
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    if (!document.getElementById('paymentModalStyle')) {
+        const style = document.createElement('style');
+        style.id = 'paymentModalStyle';
+        style.innerHTML = `
+            @keyframes pmPulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+            @keyframes pmSlideIn { from { transform: translateY(-16px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// แสดง Toast แจ้งเตือนสีเขียว (สำเร็จ) หรือสีแดง (ผิดพลาด/ยกเลิก)
+function showPaymentToast(message, type = 'success') {
+    let toastContainer = document.getElementById('paymentToastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'paymentToastContainer';
+        Object.assign(toastContainer.style, {
+            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: '10000', display: 'flex', flexDirection: 'column', gap: '8px',
+            alignItems: 'center', width: '100%', padding: '0 16px'
+        });
+        document.body.appendChild(toastContainer);
+    }
+
+    const colors = {
+        success: { bg: '#052e1f', border: '#16a34a', text: '#4ade80', icon: 'fa-circle-check' },
+        error:   { bg: '#450a0a', border: '#dc2626', text: '#f87171', icon: 'fa-circle-xmark' }
+    };
+    const c = colors[type] || colors.success;
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        background:${c.bg}; border:1px solid ${c.border}; color:${c.text};
+        padding:14px 20px; border-radius:12px; font-size:13px; font-weight:700;
+        display:flex; align-items:center; gap:10px; max-width:360px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.4); animation: pmSlideIn 0.25s ease;
+    `;
+    toast.innerHTML = `<i class="fa-solid ${c.icon}" style="font-size:16px;"></i><span>${message}</span>`;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
+function clearPaymentTimers() {
+    if (paymentCountdownInterval) clearInterval(paymentCountdownInterval);
+    if (paymentAutoConfirmTimeout) clearTimeout(paymentAutoConfirmTimeout);
+    paymentCountdownInterval = null;
+    paymentAutoConfirmTimeout = null;
+}
+
+function closePaymentModal(showCancelToast) {
+    clearPaymentTimers();
+    const overlay = document.getElementById('paymentModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.classList.add('hidden');
+    }
+    if (showCancelToast) {
+        showPaymentToast(currentLang === 'th' ? 'ยกเลิกการชำระเงินแล้ว' : 'Payment cancelled.', 'error');
+    }
+}
+
+// เปิดหน้าจ่ายเงินแบบจำลอง พร้อม QR Code และนับถอยหลัง 80 วินาที
+function openPaymentModal(total, orderRef) {
+    ensurePaymentModalMarkup();
+
+    pendingCheckoutTotal = total;
+    pendingOrderRef = orderRef;
+
+    const overlay = document.getElementById('paymentModalOverlay');
+    const qrImg = document.getElementById('paymentQrImage');
+    const amountEl = document.getElementById('paymentModalAmount');
+    const refEl = document.getElementById('paymentModalRef');
+    const statusRow = document.getElementById('paymentStatusRow');
+    const countdownText = document.getElementById('paymentCountdownText');
+
+    qrImg.src = "photo/QR.jpg";
+    amountEl.innerText = `฿${total.toLocaleString()}`;
+    refEl.innerText = orderRef;
+    statusRow.innerHTML = `
+        <span style="width:8px;height:8px;border-radius:999px;background:#facc15; display:inline-block; animation:pmPulse 1s infinite;"></span>
+        <span>${currentLang === 'th' ? 'กรุณาโอนเงินแล้วแนบสลิปด้านล่าง' : 'Please transfer, then attach your slip below.'}</span>
+    `;
+
+    // รีเซ็ตส่วนแนบสลิปทุกครั้งที่เปิดหน้าจ่ายเงินใหม่
+    resetPaymentSlipUI();
+
+    overlay.style.display = 'flex';
+    overlay.classList.remove('hidden');
+
+    let remaining = PAYMENT_TIMEOUT_SECONDS;
+    updatePaymentCountdownDisplay(countdownText, remaining);
+
+    clearPaymentTimers();
+
+    paymentCountdownInterval = setInterval(() => {
+        remaining -= 1;
+        updatePaymentCountdownDisplay(countdownText, remaining);
+        if (remaining <= 0) {
+            clearPaymentTimers();
+            statusRow.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-circle-exclamation"></i> ${currentLang === 'th' ? 'QR Code หมดอายุ กรุณาลองใหม่' : 'QR Code expired. Please try again.'}</span>`;
+            const confirmBtn = document.getElementById('paymentConfirmBtn');
+            if (confirmBtn) confirmBtn.disabled = true;
+            setTimeout(() => closePaymentModal(false), 1800);
+        }
+    }, 1000);
+
+    // หมายเหตุ: ไม่มีการยืนยันจ่ายเงินอัตโนมัติแล้ว ผู้ใช้ต้องแนบรูปสลิปการโอนแล้วกด "ยืนยันการชำระเงิน" เอง
+}
+
+// ล้างค่าไฟล์สลิปที่เคยแนบไว้ และรีเซ็ต UI ของส่วนแนบสลิปกลับเป็นค่าเริ่มต้น
+let selectedSlipDataUrl = null;
+function resetPaymentSlipUI() {
+    selectedSlipDataUrl = null;
+
+    const slipInput = document.getElementById('paymentSlipInput');
+    const dropzone = document.getElementById('paymentSlipDropzone');
+    const preview = document.getElementById('paymentSlipPreview');
+    const confirmBtn = document.getElementById('paymentConfirmBtn');
+
+    if (slipInput) slipInput.value = '';
+    if (dropzone) dropzone.style.display = 'block';
+    if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = 'ยืนยันการชำระเงิน';
+        confirmBtn.style.background = '#334155';
+        confirmBtn.style.color = '#94a3b8';
+        confirmBtn.style.cursor = 'not-allowed';
+    }
+}
+
+// เมื่อผู้ใช้เลือกไฟล์รูปสลิป: แสดงตัวอย่างรูป และเปิดใช้งานปุ่มยืนยัน
+function handleSlipSelected(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showPaymentToast(currentLang === 'th' ? 'กรุณาแนบไฟล์รูปภาพเท่านั้น' : 'Please attach an image file.', 'error');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        selectedSlipDataUrl = reader.result;
+
+        const preview = document.getElementById('paymentSlipPreview');
+        const dropzone = document.getElementById('paymentSlipDropzone');
+        const confirmBtn = document.getElementById('paymentConfirmBtn');
+
+        if (preview) {
+            preview.src = selectedSlipDataUrl;
+            preview.style.display = 'block';
+        }
+        if (dropzone) dropzone.style.display = 'none';
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.background = 'linear-gradient(90deg,#06b6d4,#2563eb)';
+            confirmBtn.style.color = '#fff';
+            confirmBtn.style.cursor = 'pointer';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+// ผู้ใช้กด "ยืนยันการชำระเงิน" หลังแนบสลิปแล้ว: ส่งสลิปไปตรวจสอบจริงกับ Cloud Function (SlipOK)
+// ตรวจสอบ 3 อย่าง: ยอดเงินตรงกับราคาสินค้า, บัญชีปลายทางตรงกับบัญชีร้าน, วันเวลาที่โอนต้องไม่เก่าเกินไป
+async function submitPaymentSlip() {
+    if (!selectedSlipDataUrl) {
+        showPaymentToast(currentLang === 'th' ? 'กรุณาแนบรูปสลิปการโอนก่อนยืนยัน' : 'Please attach your transfer slip first.', 'error');
+        return;
+    }
+
+    const confirmBtn = document.getElementById('paymentConfirmBtn');
+    const statusRow = document.getElementById('paymentStatusRow');
+
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.style.cursor = 'not-allowed';
+        confirmBtn.innerText = currentLang === 'th' ? 'กำลังตรวจสอบสลิป...' : 'Verifying slip...';
+    }
+    if (statusRow) {
+        statusRow.innerHTML = `<span style="color:#facc15;"><i class="fa-solid fa-spinner fa-spin"></i> ${currentLang === 'th' ? 'กำลังตรวจสอบสลิปกับธนาคาร...' : 'Verifying slip with the bank...'}</span>`;
+    }
+
+    try {
+        // เรียก Cloud Function ฝั่งเซิร์ฟเวอร์ (verifyPaymentSlip) ให้ตรวจสลิปจริงผ่าน SlipOK
+        // ต้องตั้งค่า Cloud Function นี้ไว้ล่วงหน้า ดูไฟล์ functions/verifyPaymentSlip.js ที่แนบให้
+        const verifySlipFn = firebase.functions().httpsCallable('verifyPaymentSlip');
+        const result = await verifySlipFn({
+            imageBase64: selectedSlipDataUrl,
+            orderRef: pendingOrderRef,
+            expectedAmount: pendingCheckoutTotal
+        });
+
+        const { valid, reason } = result.data;
+
+        if (!valid) {
+            // สลิปไม่ผ่านการตรวจสอบ (ยอดไม่ตรง / บัญชีไม่ตรง / วันเวลาไม่ตรง / สลิปถูกใช้ไปแล้ว)
+            if (statusRow) {
+                statusRow.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-circle-xmark"></i> ${reason || (currentLang === 'th' ? 'สลิปไม่ถูกต้อง' : 'Invalid slip')}</span>`;
+            }
+            showPaymentToast(reason || (currentLang === 'th' ? 'ตรวจสอบสลิปไม่ผ่าน กรุณาตรวจสอบและแนบสลิปใหม่' : 'Slip verification failed. Please check and re-attach.'), 'error');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.style.cursor = 'pointer';
+                confirmBtn.innerText = currentLang === 'th' ? 'ยืนยันการชำระเงิน' : 'Confirm Payment';
+            }
+            return;
+        }
+
+        // สลิปตรวจสอบผ่านทุกจุด (ยอดเงิน / บัญชีปลายทาง / วันเวลา) -> ยืนยันว่าชำระเงินสำเร็จ
+        confirmPaymentSuccess();
+    } catch (error) {
+        console.error('ตรวจสอบสลิปไม่สำเร็จ:', error);
+        if (statusRow) {
+            statusRow.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-circle-exclamation"></i> ${currentLang === 'th' ? 'เกิดข้อผิดพลาดในการตรวจสอบสลิป' : 'Error verifying slip'}</span>`;
+        }
+        showPaymentToast(currentLang === 'th' ? 'เกิดข้อผิดพลาดในการตรวจสอบสลิป กรุณาลองใหม่อีกครั้ง' : 'Something went wrong verifying your slip. Please try again.', 'error');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.cursor = 'pointer';
+            confirmBtn.innerText = currentLang === 'th' ? 'ยืนยันการชำระเงิน' : 'Confirm Payment';
+        }
+    }
+}
+
+function updatePaymentCountdownDisplay(el, seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    el.innerText = `${m}:${s}`;
+    el.style.color = seconds <= 10 ? '#f87171' : '#facc15';
+}
+
+// เมื่อตรวจพบว่าชำระเงินสำเร็จ: ปิดหน้า QR, แจ้งเตือนสีเขียว แล้วค่อยบันทึกคำสั่งซื้อจริง
+async function confirmPaymentSuccess() {
+    clearPaymentTimers();
+    const statusRow = document.getElementById('paymentStatusRow');
+    if (statusRow) {
+        statusRow.innerHTML = `<span style="color:#4ade80;"><i class="fa-solid fa-circle-check"></i> ${currentLang === 'th' ? 'ตรวจพบการชำระเงินแล้ว' : 'Payment detected'}</span>`;
+    }
+
+    setTimeout(async () => {
+        closePaymentModal(false);
+        showPaymentToast(
+            currentLang === 'th' ? 'ชำระเงินสำเร็จ! ขอบคุณที่ใช้บริการ COMPUNG' : 'Payment successful! Thank you for shopping with COMPUNG.',
+            'success'
+        );
+        await finalizeCheckoutOrder();
+    }, 900);
+}
+
+// บันทึกคำสั่งซื้อจริงลง Firestore หลังจากการชำระเงินสำเร็จเรียบร้อยแล้ว (ย้ายมาจาก checkout() เดิม)
+async function finalizeCheckoutOrder() {
     const checkoutBtn = document.getElementById('checkoutBtn');
     if (checkoutBtn) checkoutBtn.disabled = true;
+
+    const total = pendingCheckoutTotal;
 
     try {
         // บันทึกคำสั่งซื้อจริงลงใน Firestore ที่ users/{uid}/orders
@@ -1191,6 +1538,7 @@ async function checkout() {
             })),
             total: total,
             status: 'completed',
+            slipConfirmed: true,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
@@ -1198,14 +1546,16 @@ async function checkout() {
         await syncCartToFirestore();
         await loadOrderHistoryFromFirestore();
 
-        alert(currentLang === 'th' ? 'สั่งซื้อสินค้าเรียบร้อยแล้ว! ขอบคุณที่ใช้บริการ COMPUNG' : 'Order placed successfully! Thank you for using COMPUNG.');
         updateCartCount();
         renderCartItems();
         renderOrderHistory();
         toggleCartModal();
     } catch (error) {
         console.error('บันทึกคำสั่งซื้อไม่สำเร็จ:', error);
-        alert(currentLang === 'th' ? 'เกิดข้อผิดพลาดในการสั่งซื้อ กรุณาลองใหม่อีกครั้ง' : 'Something went wrong placing your order. Please try again.');
+        showPaymentToast(
+            currentLang === 'th' ? 'ชำระเงินสำเร็จ แต่บันทึกคำสั่งซื้อไม่สำเร็จ กรุณาติดต่อแอดมิน' : 'Payment succeeded but saving the order failed. Please contact support.',
+            'error'
+        );
     } finally {
         if (checkoutBtn) checkoutBtn.disabled = false;
     }
