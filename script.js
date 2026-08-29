@@ -2,33 +2,145 @@
 
 let products = [];
 
-// ฟังก์ชันดึงข้อมูลสินค้าจากคอลเลกชัน "products" ใน Firebase
-async function fetchProductsFromFirebase() {
+// ==========================================
+// PRODUCT CACHE (ลด Firestore Reads)
+// เก็บผลลัพธ์สินค้าไว้ใน localStorage เพื่อไม่ต้องยิง Firestore ใหม่
+// ทุกครั้งที่เปลี่ยนหน้า/เปิดแท็บใหม่ (index -> หมวดหมู่ -> รายละเอียดสินค้า -> ฯลฯ)
+// ใช้ localStorage แทน sessionStorage เพื่อให้แคชใช้ร่วมกันได้ทุกแท็บ/ทุกครั้งที่เปิดเว็บ
+//
+// ระบบเช็คเวอร์ชัน (meta/products): แทนที่จะดึงสินค้าทั้ง collection ใหม่ทุกครั้งที่แคชหมดอายุ
+// จะเช็คเอกสารเล็ก ๆ 1 ใบก่อน (เสีย 1 read) ว่าตรงกับเวอร์ชันที่แคชไว้ไหม
+// ถ้าตรง = สินค้ายังไม่เปลี่ยน ใช้แคชเดิมต่อได้เลย ไม่ต้องดึงทั้ง collection
+// จะดึงทั้ง collection จริง (ตามจำนวนสินค้า) ก็ต่อเมื่อแอดมินบันทึก/ลบสินค้าจริง ๆ เท่านั้น
+// ==========================================
+const PRODUCTS_CACHE_KEY = 'compung_products_cache_v1';
+const PRODUCTS_CACHE_TTL_MS = 2 * 60 * 1000; // ช่วงผ่อนผัน 2 นาที: ในช่วงนี้ใช้แคชเดิมได้เลยโดยไม่เช็คอะไรเลย
+// พ้นช่วงนี้แล้วค่อยเช็คเวอร์ชัน (1 read) ก่อนตัดสินใจว่าต้องดึงทั้ง collection ใหม่หรือไม่
+// หมายเหตุ: ตอนแอดมินเพิ่ม/แก้ไข/ลบสินค้า ระบบเรียก fetchProductsFromFirebase(true) เพื่อบังคับดึงสด
+// และเขียนทับแคชนี้อยู่แล้ว ลูกค้าจะเห็นข้อมูลใหม่ทันทีโดยไม่ต้องรอ TTL หมดอายุ
+
+// อ่านแคชสินค้าจาก localStorage — คืนค่า null ถ้าไม่มีแคชหรือข้อมูลเสีย (ไม่เช็ค TTL ในนี้แล้ว)
+function readProductsCache() {
     try {
-        const snapshot = await db.collection("products").get();
+        const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+        if (!raw) return null;
+
+        const cached = JSON.parse(raw);
+        if (!Array.isArray(cached.products)) return null;
+
+        return cached; // { timestamp, version, products }
+    } catch (error) {
+        // ข้อมูลแคชเสีย/parse ไม่ได้ ไม่ต้อง throw ต่อ แค่ให้ไปดึงใหม่จาก Firestore แทน
+        console.warn('อ่านแคชสินค้าไม่สำเร็จ จะดึงข้อมูลใหม่จาก Firebase แทน:', error);
+        return null;
+    }
+}
+
+// บันทึกสินค้าล่าสุดลง localStorage พร้อม timestamp และเวอร์ชันล่าสุดที่รู้
+function writeProductsCache(productList, version) {
+    try {
+        localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
+            timestamp: Date.now(),
+            version: version || null,
+            products: productList
+        }));
+    } catch (error) {
+        // เช่น localStorage เต็ม หรือถูกปิดใช้งาน (บาง Private/Incognito mode) — ข้ามได้ ไม่กระทบการทำงานหลัก
+        console.warn('บันทึกแคชสินค้าไม่สำเร็จ:', error);
+    }
+}
+
+// ล้างแคชสินค้าทิ้ง (เผื่อในอนาคตอยากบังคับเคลียร์แคชจากจุดอื่น)
+function clearProductsCache() {
+    try {
+        localStorage.removeItem(PRODUCTS_CACHE_KEY);
+    } catch (error) {
+        // เพิกเฉยได้
+    }
+}
+
+// ดึงเวอร์ชันล่าสุดของสินค้าจากเอกสาร meta/products (1 read เท่านั้น ไม่ว่าสินค้าจะมีกี่ชิ้น)
+// เอกสารนี้ถูกอัปเดตทุกครั้งที่แอดมินบันทึก/ลบสินค้า (ดูฟังก์ชัน saveProduct / deleteProduct)
+async function fetchProductsVersion() {
+    try {
+        const metaDoc = await db.collection('meta').doc('products').get();
+        if (!metaDoc.exists) return null;
+        const updatedAt = metaDoc.data().updatedAt;
+        return updatedAt ? String(updatedAt.toMillis()) : null;
+    } catch (error) {
+        console.warn('เช็คเวอร์ชันสินค้าไม่สำเร็จ:', error);
+        return null; // เช็คไม่ได้ ให้ถือว่าต้องดึงทั้งหมดใหม่เพื่อความชัวร์
+    }
+}
+
+// รวมการ Render หน้าเว็บทุกจุดที่ต้องอัปเดตเมื่อ products เปลี่ยน
+// (ใช้ร่วมกันทั้งตอนโหลดสดจาก Firestore และตอนใช้ข้อมูลจากแคช)
+function renderAllProductViews() {
+    if (typeof renderProducts === 'function') {
+        renderProducts(products, 'allProductsGrid');
+    }
+    if (typeof renderAllTypedSections === 'function') {
+        renderAllTypedSections();
+    }
+    if (typeof renderGamingGearGrid === 'function') {
+        if (typeof initSidebarFilters === 'function') {
+            initSidebarFilters(); // ตั้งค่าช่วงราคา + สร้างรายชื่อ Brand ให้ Sidebar Filter (ทำครั้งเดียว)
+        }
+        renderGamingGearGrid();
+    }
+    if (typeof renderProductDetailPage === 'function') {
+        renderProductDetailPage(); // ทำงานเฉพาะหน้า product.html เท่านั้น
+    }
+}
+
+// ฟังก์ชันดึงข้อมูลสินค้าจากคอลเลกชัน "products" ใน Firebase
+// forceRefresh = true: ข้ามแคชและการเช็คเวอร์ชันทั้งหมด ดึงข้อมูลสดจาก Firestore ทันที
+// (ใช้หลังแอดมิน เพิ่ม/แก้ไข/ลบ สินค้า เพื่อให้เห็นผลทันที)
+async function fetchProductsFromFirebase(forceRefresh = false) {
+    try {
+        const cached = forceRefresh ? null : readProductsCache();
+
+        if (cached) {
+            // ช่วงผ่อนผัน: ถ้าเพิ่งเช็ค/ดึงข้อมูลมาไม่เกิน TTL ที่ตั้งไว้ ใช้แคชเดิมต่อได้เลย
+            // ไม่ต้องเช็คเวอร์ชันซ้ำด้วย (ลด read กรณีลูกค้าเปิดหลายหน้าในเวลาสั้น ๆ)
+            const withinGracePeriod = cached.timestamp && (Date.now() - cached.timestamp < PRODUCTS_CACHE_TTL_MS);
+            if (withinGracePeriod) {
+                products = cached.products;
+                renderAllProductViews();
+                return; // ไม่เสีย read เลยแม้แต่ครั้งเดียว
+            }
+
+            // พ้นช่วงผ่อนผันแล้ว → เช็คเวอร์ชันก่อน (เสีย 1 read) แทนที่จะดึงทั้ง collection ทันที
+            const latestVersion = await fetchProductsVersion();
+
+            // ถ้าเช็คเวอร์ชันได้ และตรงกับที่แคชไว้ = สินค้ายังไม่เปลี่ยน ใช้แคชเดิมต่อได้เลย
+            if (latestVersion !== null && latestVersion === cached.version) {
+                products = cached.products;
+                writeProductsCache(products, latestVersion); // รีเฟรช timestamp ให้เข้าช่วงผ่อนผันใหม่อีกรอบ
+                renderAllProductViews();
+                return; // จบตรงนี้ เสียแค่ 1 read (เช็คเวอร์ชัน) ไม่แตะ collection สินค้าเลย
+            }
+            // ถ้าเวอร์ชันไม่ตรง (หรือเช็คเวอร์ชันไม่สำเร็จ) จะไหลต่อไปดึงทั้ง collection ใหม่ด้านล่าง
+        }
+
+        const [snapshot, latestVersion] = await Promise.all([
+            db.collection("products").get(),
+            fetchProductsVersion()
+        ]);
 
         // แปลงข้อมูลจาก Firebase มาใส่ในตัวแปร products
+        // สำคัญ: ให้ "id" ของสินค้า = Document ID จริงของ Firestore เสมอ (สุ่มโดย Firestore ตอนสร้าง)
+        // เพื่อการันตีว่าจะไม่มีทางซ้ำกัน แม้แอดมินหลายคนจะเพิ่มสินค้าพร้อมกัน
+        // (spread doc.data() ก่อน แล้วค่อย override ด้วย doc.id ทีหลัง เผื่อเอกสารเก่ามี field "id" แบบตัวเลขค้างอยู่)
         products = snapshot.docs.map(doc => ({
-            firestoreId: doc.id, // รหัสเอกสารอ้างอิงของ Firebase
-            ...doc.data()
+            ...doc.data(),
+            id: doc.id,
+            firestoreId: doc.id // เก็บไว้เผื่อโค้ดส่วนอื่นยังอ้างอิง firestoreId อยู่
         }));
 
-        // Render หน้าเว็บตามฟังก์ชันเดิมของคุณ
-        if (typeof renderProducts === 'function') {
-            renderProducts(products, 'allProductsGrid');
-        }
-        if (typeof renderAllTypedSections === 'function') {
-            renderAllTypedSections();
-        }
-        if (typeof renderGamingGearGrid === 'function') {
-            if (typeof initSidebarFilters === 'function') {
-                initSidebarFilters(); // ตั้งค่าช่วงราคา + สร้างรายชื่อ Brand ให้ Sidebar Filter (ทำครั้งเดียว)
-            }
-            renderGamingGearGrid();
-        }
-        if (typeof renderProductDetailPage === 'function') {
-            renderProductDetailPage(); // ทำงานเฉพาะหน้า product.html เท่านั้น
-        }
+        writeProductsCache(products, latestVersion); // เก็บแคช + เวอร์ชันล่าสุดไว้ใช้ในหน้าอื่น/รอบถัดไป
+
+        renderAllProductViews();
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการดึงข้อมูลจาก Firebase:", error);
     } finally {
@@ -535,10 +647,10 @@ function renderProducts(items, gridId = 'productGrid') {
 
             ${isCurrentUserAdmin() ? `
             <div class="absolute top-3 right-3 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition duration-200">
-                <button onclick="event.stopPropagation(); editProduct(${p.id})" title="แก้ไข" class="bg-slate-950/80 hover:bg-amber-500 hover:text-slate-950 text-amber-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
+                <button onclick="event.stopPropagation(); editProduct('${p.id}')" title="แก้ไข" class="bg-slate-950/80 hover:bg-amber-500 hover:text-slate-950 text-amber-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
                     <i class="fa-solid fa-pen-to-square"></i>
                 </button>
-                <button onclick="event.stopPropagation(); deleteProduct(${p.id})" title="ลบสินค้า" class="bg-slate-950/80 hover:bg-red-500 hover:text-white text-red-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
+                <button onclick="event.stopPropagation(); deleteProduct('${p.id}')" title="ลบสินค้า" class="bg-slate-950/80 hover:bg-red-500 hover:text-white text-red-400 backdrop-blur-md w-7 h-7 rounded-lg flex items-center justify-center text-xs shadow-md transition">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>` : ''}
@@ -576,7 +688,7 @@ function renderProducts(items, gridId = 'productGrid') {
                 ${hasDiscount ? `<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">-฿${discountAmount.toLocaleString()}</span>` : `<span class="text-[10px] text-gray-500">*ราคาเฉพาะออนไลน์</span>`}
             </div>
 
-            <button onclick="event.stopPropagation(); addToCart(${p.id})" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
+            <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
                 <i class="fa-solid fa-cart-shopping"></i> ${translations[currentLang].buyNow}
             </button>
         </div>
@@ -703,7 +815,6 @@ function renderGamingGearGrid() {
 
             <div class="flex justify-between items-center mb-1">
                 <span class="text-[10px] font-bold text-cyan-500 uppercase tracking-wide">${p.brand}</span>
-                <span class="text-[9px] font-mono text-slate-500">${p.id}</span>
             </div>
 
             <div class="relative overflow-hidden rounded-xl mb-3 bg-gradient-to-br from-slate-100 via-white to-slate-200 h-36 w-full flex items-center justify-center shrink-0 shadow-inner">
@@ -877,8 +988,6 @@ function renderProductDetailPage() {
 
             <div class="flex items-center gap-3 text-xs text-gray-400 mb-4">
                 <span>แบรนด์: <span class="text-cyan-400 font-semibold">${product.brand}</span></span>
-                <span class="text-slate-700">|</span>
-                <span>รหัสสินค้า: <span class="font-mono">${product.id}</span></span>
             </div>
 
             <div class="flex items-center gap-3 mb-1">
@@ -1123,12 +1232,12 @@ function renderCartItems() {
                     <h4 class="text-xs font-bold text-white truncate">${item.name}</h4>
                     <p class="text-xs text-cyan-400 font-bold">฿${item.price.toLocaleString()}</p>
                     <div class="flex items-center gap-2 mt-1">
-                        <button onclick="changeQuantity(${item.id}, -1)" class="w-5 h-5 bg-slate-800 text-gray-300 rounded hover:bg-slate-700 flex items-center justify-center text-xs">-</button>
+                        <button onclick="changeQuantity('${item.id}', -1)" class="w-5 h-5 bg-slate-800 text-gray-300 rounded hover:bg-slate-700 flex items-center justify-center text-xs">-</button>
                         <span class="text-xs font-bold">${item.quantity}</span>
-                        <button onclick="changeQuantity(${item.id}, 1)" class="w-5 h-5 bg-slate-800 text-gray-300 rounded hover:bg-slate-700 flex items-center justify-center text-xs">+</button>
+                        <button onclick="changeQuantity('${item.id}', 1)" class="w-5 h-5 bg-slate-800 text-gray-300 rounded hover:bg-slate-700 flex items-center justify-center text-xs">+</button>
                     </div>
                 </div>
-                <button onclick="removeFromCart(${item.id})" class="text-red-400 hover:text-red-300 text-xs p-1">
+                <button onclick="removeFromCart('${item.id}')" class="text-red-400 hover:text-red-300 text-xs p-1">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
@@ -2142,26 +2251,22 @@ async function saveProduct(e) {
         return;
     }
 
+    // ดึงค่า Document ID เดิมจาก input ซ่อน (ถูกเซ็ตไว้ตอนกด "แก้ไข" ในฟังก์ชัน editProduct)
+    // ถ้าเป็นการเพิ่มสินค้าใหม่ ค่านี้จะเป็นสตริงว่าง ""
     const editId = document.getElementById('editProductId').value;
-    let productIdNum;
 
-    if (editId) {
-        productIdNum = Number(editId);
-    } else {
-        const validIds = products
-            .map(p => Number(p.id))
-            .filter(id => !isNaN(id) && id > 0);
+    // ใช้ editId เป็น Document ID เดิมตอนแก้ไข (editId คือ Firestore Document ID ที่เป็นสตริงอยู่แล้ว)
+    // ถ้าเป็นการเพิ่มสินค้าใหม่ ให้ Firestore เป็นคนสุ่ม Document ID ให้เอง (.doc() ไม่ใส่ argument)
+    // วิธีนี้การันตีว่า ID จะไม่มีทางชนกัน แม้แอดมินหลายคนจะกด "บันทึก" พร้อมกันในเวลาเดียวกัน
+    // (ต่างจากระบบเดิมที่หาค่า ID ตัวเลขสูงสุดแล้ว +1 เอง ซึ่งถ้าอ่านค่าพร้อมกันจะได้เลขซ้ำ และเขียนทับกันได้)
+    const docRef = editId
+        ? db.collection("products").doc(editId)
+        : db.collection("products").doc();
 
-        const maxId = validIds.length > 0 ? Math.max(...validIds) : 0;
-        productIdNum = maxId + 1;
-    }
-
-    const customDocId = `id-${productIdNum}`;
     const existingProduct = editId ? products.find(p => String(p.id) === String(editId)) : null;
     const soldCount = existingProduct ? (existingProduct.sold || 0) : 0;
 
     const productData = {
-        id: productIdNum,
         name: document.getElementById('pName').value.trim(),
         category: document.getElementById('pCategory').value,
         productType: document.getElementById('pSubCategory').value || 'normal',
@@ -2175,12 +2280,19 @@ async function saveProduct(e) {
     };
 
     try {
-        await db.collection("products").doc(customDocId).set(productData, { merge: true });
+        await docRef.set(productData, { merge: true });
 
-        alert(`บันทึกข้อมูลสำเร็จ! รหัสสินค้า ID: ${productIdNum}`);
+        // อัปเดตเวอร์ชันสินค้า ให้ลูกค้าที่ใช้แคชอยู่รู้ว่าต้องดึงข้อมูลใหม่รอบถัดไป
+        await db.collection('meta').doc('products').set({
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        alert("บันทึกข้อมูลสินค้าสำเร็จ!");
         if (typeof closeAdminModal === 'function') closeAdminModal();
 
-        await fetchProductsFromFirebase();
+        // forceRefresh = true: ดึงข้อมูลสดจาก Firestore ทันที ไม่ใช้แคชเก่า
+        // เพื่อให้แอดมินเห็นสินค้าที่เพิ่ง เพิ่ม/แก้ไข ทันที (แคชนี้จะถูกบันทึกทับให้ทุกหน้าใช้ต่อด้วย)
+        await fetchProductsFromFirebase(true);
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการบันทึกสินค้า:", error);
         alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
@@ -2229,13 +2341,18 @@ async function deleteProduct(id) {
 
     if (confirm(confirmMsg)) {
         try {
-            const item = products.find(p => String(p.id) === String(id));
-            const docIdToDelete = (item && item.firestoreId) ? item.firestoreId : `id-${id}`;
+            // id ตอนนี้คือ Firestore Document ID โดยตรงอยู่แล้ว (มาจาก doc.id ตอนดึงข้อมูล)
+            await db.collection("products").doc(id).delete();
 
-            await db.collection("products").doc(docIdToDelete).delete();
+            // อัปเดตเวอร์ชันสินค้า ให้ลูกค้าที่ใช้แคชอยู่รู้ว่าต้องดึงข้อมูลใหม่รอบถัดไป
+            await db.collection('meta').doc('products').set({
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
             alert("ลบสินค้าเรียบร้อยแล้ว!");
 
-            await fetchProductsFromFirebase();
+            // forceRefresh = true: ดึงข้อมูลสดจาก Firestore ทันที ไม่ใช้แคชเก่า
+            await fetchProductsFromFirebase(true);
         } catch (error) {
             console.error("เกิดข้อผิดพลาดในการลบสินค้า:", error);
             alert("ไม่สามารถลบสินค้าได้ กรุณาลองใหม่อีกครั้ง");
