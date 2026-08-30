@@ -1089,7 +1089,17 @@ function initSidebarFilters() {
     // สร้างรายชื่อ Brand แบบไดนามิกจากสินค้าจริงในหมวดหมู่นี้ (ตั้งครั้งเดียวตอนโหลดหน้า)
     const brandListEl = document.getElementById('brandFilterList');
     if (brandListEl && !brandListEl.dataset.initialized) {
-        const brands = [...new Set(items.map(p => p.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const brandMap = new Map();
+        items.forEach(p => {
+            const rawBrand = (p.brand || '').trim();
+            if (!rawBrand) return;
+            const key = rawBrand.toLowerCase();
+            // เก็บชื่อรูปแบบแรกที่เจอไว้ใช้แสดงผล (กันไม่ให้ Logitech / LOGITECH ขึ้นซ้ำกัน)
+            if (!brandMap.has(key)) {
+                brandMap.set(key, rawBrand);
+            }
+        });
+        const brands = [...brandMap.values()].sort((a, b) => a.localeCompare(b));
 
         if (brands.length === 0) {
             brandListEl.innerHTML = `<p class="text-[11px] text-gray-500">ไม่พบแบรนด์ในหมวดหมู่นี้</p>`;
