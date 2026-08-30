@@ -91,6 +91,11 @@ function renderAllProductViews() {
     if (typeof renderProductDetailPage === 'function') {
         renderProductDetailPage(); // ทำงานเฉพาะหน้า product.html เท่านั้น
     }
+
+    // อัปเดตตัวเลข badge จำนวนสินค้าทั้งหมดบนแท็บ Admin ทันทีที่ข้อมูลสินค้าเปลี่ยน
+    // (ไม่ต้องรอให้แอดมินเปิด modal ตั้งค่าก่อน ตัวเลขจะพร้อมอยู่แล้วตั้งแต่หน้าเว็บโหลดเสร็จ)
+    const countBadge = document.getElementById('adminProductsCountBadge');
+    if (countBadge) countBadge.innerText = String(products.length);
 }
 
 // ฟังก์ชันดึงข้อมูลสินค้าจากคอลเลกชัน "products" ใน Firebase
