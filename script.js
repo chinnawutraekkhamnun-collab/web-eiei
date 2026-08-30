@@ -1378,6 +1378,10 @@ function scrollRelatedProducts(dir) {
     grid.scrollBy({ left: step * dir, behavior: 'smooth' });
 }
 
+// จำนวนสินค้าสูงสุดต่อหน้าตอนค้นหาจากหน้าแรก (index.html) และหน้าปัจจุบันที่กำลังแสดงอยู่
+const PRODUCT_SEARCH_PAGE_SIZE = 20;
+let productSearchCurrentPage = 1;
+
 function filterProducts() {
     // หน้าหมวดหมู่สินค้า (เช่น camera.html, chair.html ฯลฯ) ใช้กริด gamingGearGrid
     // ไม่ใช่ productGrid — ให้ส่งต่อไปที่ renderGamingGearGrid() ซึ่งจะอ่านค่าจากช่องค้นหาเอง
@@ -1392,46 +1396,126 @@ function filterProducts() {
     const searchInput = document.getElementById('searchInput');
     const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    const productSection = document.getElementById('product-section');
-    const sectionTitleEl = document.getElementById('productSectionTitle');
-
-    let filtered;
     if (searchTerm) {
-        // มีคำค้นหา -> ค้นทั้งร้านทันที ไม่จำกัดหมวดหมู่/แบรนด์ที่เลือกไว้อยู่ก่อน (ให้ผลลัพธ์ตรงคำค้นหารวมกันมาทั้งหมด)
-        const searchWords = searchTerm.split(/\s+/).filter(Boolean);
-        filtered = products.filter(p => matchesGlobalSearch(p, searchWords));
-
-        // สลับจากแถบเลื่อนแนวนอน (สินค้าแนะนำ) เป็น grid เต็มพื้นที่ เพื่อให้เห็นผลลัพธ์ค้นหาทั้งหมดชัดเจน ไม่ต้องเลื่อนซ้าย-ขวาเอง
-        productGrid.classList.remove('flex', 'overflow-x-auto', 'snap-x', 'no-scrollbar');
-        productGrid.classList.add('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5', 'gap-3', 'sm:gap-5');
-
-        // เปลี่ยนหัวข้อให้รู้ชัดว่านี่คือผลการค้นหา ไม่ใช่ "รายการสินค้าแนะนำ" เหมือนเดิม
-        if (sectionTitleEl) {
-            sectionTitleEl.textContent = `ผลการค้นหา "${searchInput.value.trim()}" (${filtered.length} รายการ)`;
-        }
-
-        // เลื่อนหน้าไปยังส่วนผลการค้นหาให้อัตโนมัติทันทีที่พิมพ์ ผู้ใช้จะได้เห็นว่าเปลี่ยนแล้วจริง ๆ โดยไม่ต้องเลื่อนหาเอง
-        if (productSection) {
-            productSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    } else {
-        filtered = products.filter(p => {
-            const matchesCategory = currentCategory === 'all' || p.category === currentCategory;
-            const matchesBrand = currentBrand === 'all' || p.brand.toLowerCase() === currentBrand.toLowerCase();
-            return matchesCategory && matchesBrand;
-        });
-
-        // เลิกค้นหาแล้ว -> คืนสไตล์แถบเลื่อนแนวนอนและหัวข้อ "รายการสินค้าแนะนำ" กลับมาเหมือนเดิม
-        productGrid.classList.remove('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5');
-        productGrid.classList.add('flex', 'overflow-x-auto', 'snap-x', 'no-scrollbar');
-
-        if (sectionTitleEl) {
-            const t = typeof translations !== 'undefined' && translations[currentLang];
-            sectionTitleEl.textContent = (t && t.recommendedProducts) ? t.recommendedProducts : 'รายการสินค้าแนะนำ';
-        }
+        // มีคำค้นหา -> แสดงผลแบบแบ่งหน้า หน้าละ PRODUCT_SEARCH_PAGE_SIZE ชิ้น (เริ่มที่หน้า 1 ทุกครั้งที่พิมพ์ค้นหาใหม่)
+        renderProductSearchResults(1);
+        return;
     }
 
+    // เลิกค้นหาแล้ว -> คืนสไตล์แถบเลื่อนแนวนอนและหัวข้อ "รายการสินค้าแนะนำ" กลับมาเหมือนเดิม พร้อมซ่อนปุ่มแบ่งหน้า
+    const filtered = products.filter(p => {
+        const matchesCategory = currentCategory === 'all' || p.category === currentCategory;
+        const matchesBrand = currentBrand === 'all' || p.brand.toLowerCase() === currentBrand.toLowerCase();
+        return matchesCategory && matchesBrand;
+    });
+
+    productGrid.classList.remove('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5');
+    productGrid.classList.add('flex', 'overflow-x-auto', 'snap-x', 'no-scrollbar');
+
+    const sectionTitleEl = document.getElementById('productSectionTitle');
+    if (sectionTitleEl) {
+        const t = typeof translations !== 'undefined' && translations[currentLang];
+        sectionTitleEl.textContent = (t && t.recommendedProducts) ? t.recommendedProducts : 'รายการสินค้าแนะนำ';
+    }
+
+    productSearchCurrentPage = 1;
+    renderProductSearchPagination(0, 1);
+
     renderProducts(filtered);
+}
+
+// ค้นหาทั้งร้านจากช่องค้นหาบนหน้าแรก (index.html) แล้วแบ่งหน้าแสดงผล หน้าละ PRODUCT_SEARCH_PAGE_SIZE ชิ้น
+// page = ระบุเมื่อกดปุ่มเลขหน้าเท่านั้น ถ้าไม่ระบุจะรีเซ็ตกลับไปหน้า 1 เสมอ
+function renderProductSearchResults(page) {
+    const productGrid = document.getElementById('productGrid');
+    if (!productGrid) return;
+
+    productSearchCurrentPage = (typeof page === 'number') ? page : 1;
+
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const searchWords = searchTerm.split(/\s+/).filter(Boolean);
+
+    // ค้นทั้งร้านทันที ไม่จำกัดหมวดหมู่/แบรนด์ที่เลือกไว้อยู่ก่อน (ให้ผลลัพธ์ตรงคำค้นหารวมกันมาทั้งหมด)
+    const filtered = products.filter(p => matchesGlobalSearch(p, searchWords));
+
+    // สลับจากแถบเลื่อนแนวนอน (สินค้าแนะนำ) เป็น grid เต็มพื้นที่ เพื่อให้เห็นผลลัพธ์ค้นหาชัดเจน ไม่ต้องเลื่อนซ้าย-ขวาเอง
+    productGrid.classList.remove('flex', 'overflow-x-auto', 'snap-x', 'no-scrollbar');
+    productGrid.classList.add('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5', 'gap-3', 'sm:gap-5');
+
+    // เปลี่ยนหัวข้อให้รู้ชัดว่านี่คือผลการค้นหา ไม่ใช่ "รายการสินค้าแนะนำ" เหมือนเดิม
+    const sectionTitleEl = document.getElementById('productSectionTitle');
+    if (sectionTitleEl) {
+        sectionTitleEl.textContent = `ผลการค้นหา "${searchInput.value.trim()}" (${filtered.length} รายการ)`;
+    }
+
+    // เลื่อนหน้าไปยังส่วนผลการค้นหาให้อัตโนมัติ ผู้ใช้จะได้เห็นว่าเปลี่ยนแล้วจริง ๆ โดยไม่ต้องเลื่อนหาเอง
+    const productSection = document.getElementById('product-section');
+    if (productSection) {
+        productSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (filtered.length === 0) {
+        renderProducts(filtered); // จะแสดงข้อความ "ไม่พบสินค้าที่คุณกำลังค้นหา"
+        renderProductSearchPagination(0, 1);
+        return;
+    }
+
+    // แบ่งหน้า: หน้าละ PRODUCT_SEARCH_PAGE_SIZE ชิ้น
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCT_SEARCH_PAGE_SIZE));
+    if (productSearchCurrentPage > totalPages) productSearchCurrentPage = totalPages;
+    if (productSearchCurrentPage < 1) productSearchCurrentPage = 1;
+
+    const startIdx = (productSearchCurrentPage - 1) * PRODUCT_SEARCH_PAGE_SIZE;
+    const pageItems = filtered.slice(startIdx, startIdx + PRODUCT_SEARCH_PAGE_SIZE);
+
+    renderProducts(pageItems);
+    renderProductSearchPagination(filtered.length, totalPages);
+}
+
+// สร้างปุ่มเลขหน้าสำหรับผลการค้นหาบนหน้าแรก (แสดงเฉพาะตอนสินค้าเกิน PRODUCT_SEARCH_PAGE_SIZE ชิ้นเท่านั้น)
+function renderProductSearchPagination(totalItems, totalPages) {
+    const container = document.getElementById('productSectionPagination');
+    if (!container) return;
+
+    if (totalItems <= PRODUCT_SEARCH_PAGE_SIZE || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let buttonsHtml = '';
+
+    // ปุ่มย้อนกลับ
+    buttonsHtml += `
+        <button onclick="goToProductSearchPage(${productSearchCurrentPage - 1})" ${productSearchCurrentPage === 1 ? 'disabled' : ''}
+            class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center transition ${productSearchCurrentPage === 1 ? 'bg-slate-900 text-gray-600 cursor-not-allowed' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        const isActive = i === productSearchCurrentPage;
+        buttonsHtml += `
+        <button onclick="goToProductSearchPage(${i})"
+            class="w-9 h-9 rounded-lg text-sm font-bold transition ${isActive ? 'bg-[var(--theme-500)] text-slate-950 shadow-md shadow-[var(--theme-500)]/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            ${i}
+        </button>`;
+    }
+
+    // ปุ่มถัดไป
+    buttonsHtml += `
+        <button onclick="goToProductSearchPage(${productSearchCurrentPage + 1})" ${productSearchCurrentPage === totalPages ? 'disabled' : ''}
+            class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center transition ${productSearchCurrentPage === totalPages ? 'bg-slate-900 text-gray-600 cursor-not-allowed' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>`;
+
+    container.innerHTML = buttonsHtml;
+}
+
+// ไปยังหน้าที่ต้องการ แล้วเลื่อนขึ้นไปด้านบนของส่วนผลการค้นหาให้เห็นสินค้าใหม่ทันที
+function goToProductSearchPage(page) {
+    renderProductSearchResults(page);
+    const productSection = document.getElementById('product-section');
+    if (productSection) productSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function filterCategory(category) {
