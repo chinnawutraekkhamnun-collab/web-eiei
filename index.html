@@ -11,6 +11,65 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
     <style>
+        /* ==========================================
+           ระบบธีมสี (Theme Color System)
+           ตัวแปร CSS เหล่านี้ถูกใช้แทน text-cyan-400 / bg-cyan-500 ฯลฯ ทั่วทั้งเว็บ
+           เปลี่ยนค่าตัวแปรเหล่านี้ (ผ่าน JS) = เปลี่ยนสีทั้งเว็บทันที รวมโลโก้
+           ========================================== */
+        :root {
+            --theme-400: #22d3ee;
+            --theme-500: #06b6d4;
+            --theme-400-rgb: 34, 211, 238;
+            --theme-500-rgb: 6, 182, 212;
+        }
+        .admin-settings-tab-btn {
+            color: #94a3b8;
+            border-bottom: 2px solid transparent;
+        }
+        .admin-settings-tab-btn.active {
+            color: var(--theme-400);
+            border-bottom-color: var(--theme-400);
+        }
+        .theme-swatch-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            border: 2px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            transition: transform .15s ease, border-color .15s ease;
+        }
+        .theme-swatch-btn:hover {
+            transform: scale(1.1);
+        }
+        .theme-swatch-btn.active {
+            border-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+        }
+    </style>
+    <script>
+        // ตั้งค่าสีธีมจาก localStorage ก่อนหน้าเว็บ render เพื่อกันสีกระพริบเป็นค่า default ก่อนสลับ (Flash of default color)
+        (function () {
+            var THEME_COLOR_PALETTE = {
+                cyan:   { 400: '#22d3ee', 500: '#06b6d4', rgb400: '34, 211, 238',  rgb500: '6, 182, 212' },
+                green:  { 400: '#4ade80', 500: '#22c55e', rgb400: '74, 222, 128',  rgb500: '34, 197, 94' },
+                purple: { 400: '#c084fc', 500: '#a855f7', rgb400: '192, 132, 252', rgb500: '168, 85, 247' },
+                red:    { 400: '#f87171', 500: '#ef4444', rgb400: '248, 113, 113', rgb500: '239, 68, 68' },
+                orange: { 400: '#fb923c', 500: '#f97316', rgb400: '251, 146, 60',  rgb500: '249, 115, 22' },
+                pink:   { 400: '#f472b6', 500: '#ec4899', rgb400: '244, 114, 182', rgb500: '236, 72, 153' },
+                blue:   { 400: '#60a5fa', 500: '#3b82f6', rgb400: '96, 165, 250',  rgb500: '59, 130, 246' }
+            };
+            try {
+                var saved = localStorage.getItem('compung_theme_color') || 'cyan';
+                var c = THEME_COLOR_PALETTE[saved] || THEME_COLOR_PALETTE.cyan;
+                var root = document.documentElement.style;
+                root.setProperty('--theme-400', c[400]);
+                root.setProperty('--theme-500', c[500]);
+                root.setProperty('--theme-400-rgb', c.rgb400);
+                root.setProperty('--theme-500-rgb', c.rgb500);
+            } catch (e) { /* localStorage ปิดใช้งานอยู่ (เช่น Private mode บางแบบ) — ใช้สีฟ้า (cyan) ค่า default ต่อไป */ }
+        })();
+    </script>
+    <style>
         /* ซ่อนแถบเลื่อนแนวนอนของแถวสินค้า (ยังลากเลื่อนด้วยนิ้ว/เมาส์ได้ปกติ) */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -42,7 +101,7 @@
         body.light-mode .more-dropdown-menu a:hover,
         body.light-mode .more-dropdown-menu a:hover span,
         body.light-mode .more-dropdown-menu a:hover i {
-            color: #22d3ee !important;
+            color: var(--theme-400) !important;
         }
 
         /* ===================== */
@@ -80,8 +139,8 @@
             border: 3px solid transparent;
         }
         .loader-ring--1 {
-            border-top-color: #22d3ee;
-            border-right-color: #22d3ee;
+            border-top-color: var(--theme-400);
+            border-right-color: var(--theme-400);
             animation: loader-spin 1.1s linear infinite;
         }
         .loader-ring--2 {
@@ -96,7 +155,7 @@
             height: 20px;
             border-radius: 9999px;
             background: #ffffff;
-            box-shadow: 0 0 12px 4px rgba(34, 211, 238, 0.9), 0 0 24px 10px rgba(34, 211, 238, 0.5);
+            box-shadow: 0 0 12px 4px rgba(var(--theme-400-rgb), 0.9), 0 0 24px 10px rgba(var(--theme-400-rgb), 0.5);
             animation: loader-pulse 1.2s ease-in-out infinite;
         }
         .loader-text {
@@ -110,7 +169,7 @@
             color: #ffffff;
         }
         .loader-text span {
-            color: #22d3ee;
+            color: var(--theme-400);
         }
         .loader-dots::after {
             content: '';
@@ -197,7 +256,7 @@
             <div class="flex justify-between items-center w-full md:w-auto">
                 <a href="#" onclick="filterCategory('all')"
                     class="text-2xl sm:text-3xl font-black italic tracking-wider text-white flex items-center group">
-                    COM <span class="text-cyan-400 ml-1 group-hover:text-blue-500 transition">PANG</span>
+                    COM <span class="text-[var(--theme-400)] ml-1 group-hover:text-blue-500 transition">PANG</span>
                 </a>
 
                 <!-- Mobile Quick Action (Theme, Auth, Cart) -->
@@ -207,14 +266,14 @@
                         <i class="fa-solid fa-sun text-sm"></i>
                     </button>
                     <button onclick="handleAccountClick()"
-                        class="p-2 rounded-lg bg-slate-800 text-cyan-400 border border-slate-700">
+                        class="p-2 rounded-lg bg-slate-800 text-[var(--theme-400)] border border-slate-700">
                         <i class="fa-regular fa-user text-sm"></i>
                     </button>
                     <button onclick="toggleCartModal()"
                         class="relative p-2 rounded-lg bg-slate-800 text-gray-200 border border-slate-700">
                         <i class="fa-solid fa-cart-shopping text-sm"></i>
                         <span
-                            class="cart-badge-mobile absolute -top-1.5 -right-1.5 bg-cyan-500 text-black font-extrabold text-[10px] rounded-full w-4 h-4 flex items-center justify-center">0</span>
+                            class="cart-badge-mobile absolute -top-1.5 -right-1.5 bg-[var(--theme-500)] text-black font-extrabold text-[10px] rounded-full w-4 h-4 flex items-center justify-center">0</span>
                     </button>
                 </div>
             </div>
@@ -224,9 +283,9 @@
                 <div class="relative">
                     <input type="text" id="searchInput" onkeyup="filterProducts()"
                         placeholder="ค้นหาสินค้า เกมมิ่งเกียร์ สเปกคอม..." data-i18n-ph="searchPlaceholder"
-                        class="w-full pl-9 pr-4 py-1.5 sm:py-2 border border-slate-700 rounded-full bg-slate-800/80 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-xs sm:text-sm transition">
+                        class="w-full pl-9 pr-4 py-1.5 sm:py-2 border border-slate-700 rounded-full bg-slate-800/80 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--theme-400)] text-xs sm:text-sm transition">
                     <i
-                        class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 sm:top-3 text-cyan-400 text-xs sm:text-sm"></i>
+                        class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 sm:top-3 text-[var(--theme-400)] text-xs sm:text-sm"></i>
                 </div>
             </div>
 
@@ -241,8 +300,8 @@
                 <div class="flex items-center gap-3">
                     <div id="userInfoContainer" class="flex items-center gap-2">
                         <button onclick="handleAccountClick()"
-                            class="flex items-center gap-2 hover:text-cyan-400 text-sm font-medium transition">
-                            <i class="fa-regular fa-user text-xl text-cyan-400"></i>
+                            class="flex items-center gap-2 hover:text-[var(--theme-400)] text-sm font-medium transition">
+                            <i class="fa-regular fa-user text-xl text-[var(--theme-400)]"></i>
                             <span id="userStatusText" class="inline" data-i18n="loginRegister">เข้าสู่ระบบ /
                                 สมัครสมาชิก</span>
                         </button>
@@ -253,14 +312,14 @@
                     </button>
                 </div>
 
-                <button onclick="toggleCartModal()" class="relative p-2 text-gray-200 hover:text-cyan-400 transition">
+                <button onclick="toggleCartModal()" class="relative p-2 text-gray-200 hover:text-[var(--theme-400)] transition">
                     <i class="fa-solid fa-cart-shopping text-2xl"></i>
                     <span id="cartCount"
-                        class="absolute -top-1 -right-1 bg-cyan-500 text-black font-extrabold text-xs rounded-full w-5 h-5 flex items-center justify-center shadow-lg">0</span>
+                        class="absolute -top-1 -right-1 bg-[var(--theme-500)] text-black font-extrabold text-xs rounded-full w-5 h-5 flex items-center justify-center shadow-lg">0</span>
                 </button>
                 <button onclick="toggleLanguage()"
-                    class="flex items-center gap-1 hover:text-cyan-400 transition font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-[11px] sm:text-xs">
-                    <i class="fa-solid fa-globe text-cyan-400"></i>
+                    class="flex items-center gap-1 hover:text-[var(--theme-400)] transition font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-[11px] sm:text-xs">
+                    <i class="fa-solid fa-globe text-[var(--theme-400)]"></i>
                     <span id="langLabel">TH</span>
                 </button>
             </div>
@@ -274,29 +333,29 @@
                 <!-- หมวดหมู่สินค้าแนวนอน (ส่วนที่เลื่อนได้ overflow-x-auto) -->
                 <div class="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar py-1 shrink min-w-0">
                     <button onclick="filterCategory('all')"
-                        class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg flex items-center gap-1.5 font-semibold transition shrink-0">
+                        class="bg-[var(--theme-500)]/10 text-[var(--theme-400)] border border-[var(--theme-500)]/30 hover:bg-[var(--theme-500)]/20 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg flex items-center gap-1.5 font-semibold transition shrink-0">
                         <i class="fa-solid fa-border-all"></i> <span data-i18n="allProducts">หน้าแรก</span>
                     </button>
 
                     <!-- หมวดหมู่หลัก -->
                     <div class="flex items-center gap-1 sm:gap-2 border-r border-slate-700 pr-2 sm:pr-4 shrink-0">
                         <a href="m.html"
-                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                            class="text-gray-300 hover:text-[var(--theme-400)] whitespace-nowrap transition px-1.5 py-1"><i
                                 class="fa-solid fa-mouse text-xs mr-1"></i><span data-i18n="catMouse">เมาส์</span></a>
                         <a href="k.html"
-                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                            class="text-gray-300 hover:text-[var(--theme-400)] whitespace-nowrap transition px-1.5 py-1"><i
                                 class="fa-solid fa-keyboard text-xs mr-1"></i><span
                                 data-i18n="catKeyboard">คีย์บอร์ด</span></a>
                         <a href="h.html"
-                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                            class="text-gray-300 hover:text-[var(--theme-400)] whitespace-nowrap transition px-1.5 py-1"><i
                                 class="fa-solid fa-headphones text-xs mr-1"></i><span
                                 data-i18n="catHeadset">หูฟัง</span></a>
                         <a href="n.html"
-                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                            class="text-gray-300 hover:text-[var(--theme-400)] whitespace-nowrap transition px-1.5 py-1"><i
                                 class="fa-solid fa-laptop text-xs mr-1"></i><span
                                 data-i18n="catNotebook">โน้ตบุ๊ก</span></a>
                         <a href="mon.html"
-                            class="text-gray-300 hover:text-cyan-400 whitespace-nowrap transition px-1.5 py-1"><i
+                            class="text-gray-300 hover:text-[var(--theme-400)] whitespace-nowrap transition px-1.5 py-1"><i
                                 class="fa-solid fa-desktop text-xs mr-1"></i><span
                                 data-i18n="catMonitor">จอภาพ</span></a>
                     </div>
@@ -383,7 +442,13 @@
                     <!-- ปุ่มจัดการสินค้า -->
                     <button onclick="openAdminModal()"
                         class="admin-only-btn hidden text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-gray-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shrink-0">
-                        <i class="fa-solid fa-gear text-cyan-400"></i> <span data-i18n="adminManage">จัดการสินค้า</span>
+                        <i class="fa-solid fa-gear text-[var(--theme-400)]"></i> <span data-i18n="adminManage">จัดการสินค้า</span>
+                    </button>
+
+                    <!-- ปุ่มตั้งค่า Admin (รายการสินค้าทั้งหมด / ธีมสี / ผู้ใช้ออนไลน์) -->
+                    <button onclick="openAdminSettingsModal()"
+                        class="admin-only-btn hidden text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-gray-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-sliders text-[var(--theme-400)]"></i> <span data-i18n="adminSettings">ตั้งค่า (Admin)</span>
                     </button>
                 </div>
 
@@ -397,7 +462,7 @@
     <main class="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <!-- Banner ใหญ่หลัก (Slider) -->
         <div
-            class="banner-shine relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl mb-4 border border-cyan-500/30 group">
+            class="banner-shine relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl mb-4 border border-[var(--theme-500)]/30 group">
             <div id="heroSlider"
                 class="flex transition-transform duration-500 ease-in-out w-full aspect-[21/9] sm:aspect-[25/9]">
                 <img src="photo/bender.jpg" alt="Main Banner 1" class="w-full h-full object-cover flex-shrink-0">
@@ -406,18 +471,18 @@
             </div>
 
             <button onclick="prevSlide()"
-                class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 shadow-lg text-xs sm:text-base">
+                class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-[var(--theme-500)] text-white hover:text-black w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 shadow-lg text-xs sm:text-base">
                 <i class="fa-solid fa-chevron-left"></i>
             </button>
             <button onclick="nextSlide()"
-                class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 shadow-lg text-xs sm:text-base">
+                class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-[var(--theme-500)] text-white hover:text-black w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 shadow-lg text-xs sm:text-base">
                 <i class="fa-solid fa-chevron-right"></i>
             </button>
 
             <div id="sliderDots"
                 class="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-10">
                 <button onclick="goToSlide(0)"
-                    class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-cyan-400 transition-all"></button>
+                    class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[var(--theme-400)] transition-all"></button>
                 <button onclick="goToSlide(1)"
                     class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white/50 hover:bg-white transition-all"></button>
                 <button onclick="goToSlide(2)"
@@ -428,15 +493,15 @@
         <!-- Banner เล็ก 3 รูป -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-8 sm:mb-10">
             <div
-                class="banner-shine banner-delay-1 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-cyan-500/50 transition">
+                class="banner-shine banner-delay-1 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-[var(--theme-500)]/50 transition">
                 <img src="photo/bender1.jpg" alt="ประกอบคอมเทพ" class="w-full h-auto object-cover">
             </div>
             <div
-                class="banner-shine banner-delay-2 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-cyan-500/50 transition">
+                class="banner-shine banner-delay-2 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-[var(--theme-500)]/50 transition">
                 <img src="photo/bender2.jpg" alt="จัดชุดสตรีมเมอร์" class="w-full h-auto object-cover">
             </div>
             <div
-                class="banner-shine banner-delay-3 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-cyan-500/50 transition">
+                class="banner-shine banner-delay-3 rounded-xl overflow-hidden shadow-lg border border-slate-800 hover:border-[var(--theme-500)]/50 transition">
                 <img src="photo/bender3.jpg" alt="คอมลายพรีเมียม" class="w-full h-auto object-cover">
             </div>
         </div>
@@ -461,18 +526,18 @@
         <section class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-8 sm:mt-12 mb-8">
             <!-- Promo Slider Left -->
             <div
-                class="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-cyan-500/30 group h-48 sm:h-64 md:h-72 bg-slate-900">
+                class="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-[var(--theme-500)]/30 group h-48 sm:h-64 md:h-72 bg-slate-900">
                 <div id="promoSlider1" class="flex transition-transform duration-500 ease-in-out h-full">
                     <img src="photo/bender4.jpg" alt="Promo 1-1" class="w-full h-full object-cover flex-shrink-0">
                     <img src="photo/77.png" alt="Promo 1-2" class="w-full h-full object-cover flex-shrink-0">
                     <img src="photo/bender3.jpg" alt="Promo 1-3" class="w-full h-full object-cover flex-shrink-0">
                 </div>
                 <button onclick="prevPromoSlide(1)"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-[var(--theme-500)] text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
                 <button onclick="nextPromoSlide(1)"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-[var(--theme-500)] text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
                 <div id="promoDots1" class="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10"></div>
@@ -480,18 +545,18 @@
 
             <!-- Promo Slider Right -->
             <div
-                class="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-cyan-500/30 group h-48 sm:h-64 md:h-72 bg-slate-900">
+                class="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-[var(--theme-500)]/30 group h-48 sm:h-64 md:h-72 bg-slate-900">
                 <div id="promoSlider2" class="flex transition-transform duration-500 ease-in-out h-full">
                     <img src="photo/bender5.png" alt="Promo 2-1" class="w-full h-full object-cover flex-shrink-0">
                     <img src="photo/88.png" alt="Promo 2-2" class="w-full h-full object-cover flex-shrink-0">
                     <img src="photo/bender6.jpg" alt="Promo 2-3" class="w-full h-full object-cover flex-shrink-0">
                 </div>
                 <button onclick="prevPromoSlide(2)"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-[var(--theme-500)] text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
                 <button onclick="nextPromoSlide(2)"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-cyan-500 text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
+                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-[var(--theme-500)] text-white hover:text-black w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition opacity-80 sm:opacity-0 group-hover:opacity-100 z-10">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
                 <div id="promoDots2" class="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10"></div>
@@ -502,7 +567,7 @@
         <section id="product-section">
             <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-slate-800 pb-3 sm:pb-4">
                 <div class="flex items-center gap-2.5 sm:gap-3">
-                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-cyan-500 rounded-full"></div>
+                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-[var(--theme-500)] rounded-full"></div>
                     <h2 class="text-lg sm:text-2xl font-bold text-white tracking-wide" data-i18n="recommendedProducts">
                         รายการสินค้าแนะนำ</h2>
                 </div>
@@ -516,7 +581,7 @@
         <section id="hot-product-section">
             <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-slate-800 pb-3 sm:pb-4">
                 <div class="flex items-center gap-2.5 sm:gap-3">
-                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-cyan-500 rounded-full"></div>
+                    <div class="w-1 sm:w-1.5 h-5 sm:h-7 bg-[var(--theme-500)] rounded-full"></div>
                     <h2 class="text-lg sm:text-2xl font-bold text-white tracking-wide" data-i18n="hotProducts">
                         รายการสินค้ายอดฮิต</h2>
                 </div>
@@ -534,7 +599,7 @@
         <div class="bg-slate-900 border-l border-slate-800 w-full sm:max-w-md h-full flex flex-col shadow-2xl">
             <div class="p-3.5 sm:p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                 <h3 class="font-bold text-base sm:text-lg text-white flex items-center gap-2">
-                    <i class="fa-solid fa-cart-shopping text-cyan-400"></i> <span
+                    <i class="fa-solid fa-cart-shopping text-[var(--theme-400)]"></i> <span
                         data-i18n="cartTitle">ตะกร้าสินค้า</span>
                 </h3>
                 <button onclick="toggleCartModal()"
@@ -545,7 +610,7 @@
             <!-- แท็บ: ตะกร้าสินค้า / ประวัติการสั่งซื้อ -->
             <div class="flex border-b border-slate-800 bg-slate-950 shrink-0">
                 <button id="cartTabBtn" onclick="switchCartTab('cart')"
-                    class="flex-1 py-2.5 text-xs sm:text-sm font-bold text-cyan-400 border-b-2 border-cyan-400 transition">
+                    class="flex-1 py-2.5 text-xs sm:text-sm font-bold text-[var(--theme-400)] border-b-2 border-[var(--theme-400)] transition">
                     <i class="fa-solid fa-cart-shopping mr-1.5"></i><span data-i18n="cartTabLabel">ตะกร้าสินค้า</span>
                 </button>
                 <button id="historyTabBtn" onclick="switchCartTab('history')"
@@ -562,10 +627,10 @@
             <div id="cartFooter" class="p-3.5 sm:p-4 border-t border-slate-800 bg-slate-950 space-y-3">
                 <div class="flex justify-between text-sm sm:text-base font-bold text-gray-200">
                     <span data-i18n="totalPrice">ราคารวมทั้งหมด:</span>
-                    <span id="cartTotalPrice" class="text-cyan-400 text-lg sm:text-xl font-black">฿0</span>
+                    <span id="cartTotalPrice" class="text-[var(--theme-400)] text-lg sm:text-xl font-black">฿0</span>
                 </div>
                 <button id="checkoutBtn" onclick="checkout()"
-                    class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black py-2.5 sm:py-3 rounded-xl shadow-lg shadow-cyan-500/20 text-sm sm:text-base transition"
+                    class="w-full bg-gradient-to-r from-[var(--theme-500)] to-blue-600 hover:from-[var(--theme-400)] hover:to-blue-500 text-slate-950 font-black py-2.5 sm:py-3 rounded-xl shadow-lg shadow-[var(--theme-500)]/20 text-sm sm:text-base transition"
                     data-i18n="checkoutBtn">สั่งซื้อสินค้า</button>
             </div>
         </div>
@@ -588,26 +653,26 @@
                         <div>
                             <label class="block text-xs font-semibold text-gray-400 mb-1">ชื่อจริง</label>
                             <input type="text" id="authFirstName"
-                                class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                                class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none"
                                 placeholder="ชื่อจริง">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-400 mb-1">นามสกุล</label>
                             <input type="text" id="authLastName"
-                                class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                                class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none"
                                 placeholder="นามสกุล">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-400 mb-1">เบอร์โทรศัพท์</label>
                         <input type="tel" id="authPhone"
-                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none"
                             placeholder="0xx-xxx-xxxx">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-400 mb-1">ที่อยู่</label>
                         <input type="text" id="authAddress"
-                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none"
                             placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด">
                     </div>
                 </div>
@@ -616,7 +681,7 @@
                     <label class="block text-xs font-semibold text-gray-400 mb-1" data-i18n="emailLabel">อีเมล
                         (Email)</label>
                     <input type="email" id="authEmail" required
-                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none"
                         placeholder="example@email.com">
                 </div>
 
@@ -625,19 +690,19 @@
                         <label class="text-xs font-semibold text-gray-400" data-i18n="passwordLabel">รหัสผ่าน</label>
                     </div>
                     <input type="password" id="authPassword" required minlength="6"
-                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none"
                         placeholder="••••••••">
                 </div>
 
                 <button type="submit" id="authSubmitBtn"
-                    class="w-full bg-cyan-500 text-slate-950 font-bold py-2.5 rounded-lg hover:bg-cyan-400 text-xs sm:text-sm shadow-md transition"
+                    class="w-full bg-[var(--theme-500)] text-slate-950 font-bold py-2.5 rounded-lg hover:bg-[var(--theme-400)] text-xs sm:text-sm shadow-md transition"
                     data-i18n="submitBtn">ตกลง</button>
             </form>
 
             <p class="text-xs text-center mt-4 text-gray-400" id="authToggleFooter">
                 <span id="authToggleText" data-i18n="noAccountText">ยังไม่มีบัญชีใช่ไหม?</span>
                 <button onclick="switchAuthMode()" id="authBtnToggle"
-                    class="text-cyan-400 font-bold hover:underline ml-1"
+                    class="text-[var(--theme-400)] font-bold hover:underline ml-1"
                     data-i18n="registerToggleBtn">สมัครสมาชิก</button>
             </p>
         </div>
@@ -657,12 +722,12 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-400 mb-1">ชื่อจริง</label>
                         <input type="text" id="profileFirstName" required
-                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-400 mb-1">นามสกุล</label>
                         <input type="text" id="profileLastName" required
-                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                            class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none">
                     </div>
                 </div>
                 <div>
@@ -673,16 +738,16 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-400 mb-1">เบอร์โทรศัพท์</label>
                     <input type="tel" id="profilePhone"
-                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-400 mb-1">ที่อยู่</label>
                     <input type="text" id="profileAddress"
-                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                        class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs sm:text-sm text-white focus:ring-2 focus:ring-[var(--theme-400)] focus:outline-none">
                 </div>
 
                 <button type="submit" id="profileSaveBtn"
-                    class="w-full bg-cyan-500 text-slate-950 font-bold py-2.5 rounded-lg hover:bg-cyan-400 text-xs sm:text-sm shadow-md transition">
+                    class="w-full bg-[var(--theme-500)] text-slate-950 font-bold py-2.5 rounded-lg hover:bg-[var(--theme-400)] text-xs sm:text-sm shadow-md transition">
                     บันทึกการเปลี่ยนแปลง</button>
             </form>
 
@@ -794,7 +859,7 @@
                 </div>
                 <div class="flex gap-2 pt-2">
                     <button type="submit"
-                        class="flex-1 bg-cyan-500 text-slate-950 font-bold py-2 rounded text-xs hover:bg-cyan-400 transition"
+                        class="flex-1 bg-[var(--theme-500)] text-slate-950 font-bold py-2 rounded text-xs hover:bg-[var(--theme-400)] transition"
                         data-i18n="saveBtn">บันทึกข้อมูลสินค้า</button>
                     <button type="button" onclick="resetAdminForm()"
                         class="bg-slate-700 text-gray-200 font-bold px-4 py-2 rounded text-xs hover:bg-slate-600 transition"
@@ -803,12 +868,95 @@
             </form>
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- ADMIN SETTINGS MODAL (รายการสินค้าทั้งหมด / ธีมสี / ผู้ใช้ออนไลน์) -->
+    <!-- ========================================== -->
+    <div id="adminSettingsModal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex justify-center items-center p-3 sm:p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeAdminSettingsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1">
+                <i class="fa-solid fa-xmark text-lg sm:text-xl"></i>
+            </button>
+            <h3 class="text-base sm:text-xl font-bold mb-4 border-b border-slate-800 pb-3 text-white"
+                data-i18n="adminSettingsTitle">ตั้งค่า (Admin)</h3>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 mb-4 border-b border-slate-800 overflow-x-auto no-scrollbar">
+                <button onclick="switchAdminSettingsTab('products')" id="adminTabBtn-products"
+                    class="admin-settings-tab-btn px-3 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-boxes-stacked"></i> <span data-i18n="adminTabProducts">รายการสินค้าทั้งหมด</span>
+                </button>
+                <button onclick="switchAdminSettingsTab('theme')" id="adminTabBtn-theme"
+                    class="admin-settings-tab-btn px-3 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-palette"></i> <span data-i18n="adminTabTheme">ธีมสี</span>
+                </button>
+                <button onclick="switchAdminSettingsTab('online')" id="adminTabBtn-online"
+                    class="admin-settings-tab-btn px-3 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-circle-user"></i> <span data-i18n="adminTabOnline">ผู้ใช้ออนไลน์</span>
+                    <span id="onlineUsersCountBadge"
+                        class="ml-1 text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+
+            <!-- Tab: รายการสินค้าทั้งหมด -->
+            <div id="adminSettingsTab-products" class="admin-settings-tab-panel">
+                <div class="mb-3">
+                    <input type="text" id="adminProductSearchInput" oninput="renderAdminProductsList()"
+                        data-i18n-ph="adminProductSearchPlaceholder" placeholder="ค้นหาสินค้าตามชื่อ/แบรนด์..."
+                        class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="text-gray-400 border-b border-slate-800">
+                            <tr>
+                                <th class="py-2 pr-2" data-i18n="adminColProduct">สินค้า</th>
+                                <th class="py-2 pr-2" data-i18n="adminColCategory">หมวดหมู่</th>
+                                <th class="py-2 pr-2" data-i18n="adminColPrice">ราคา</th>
+                                <th class="py-2 pr-2 text-right" data-i18n="adminColAction">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminProductsListBody"></tbody>
+                    </table>
+                    <p id="adminProductsListEmpty" class="text-center text-gray-500 text-xs py-6 hidden"
+                        data-i18n="adminProductsListEmpty">ไม่พบสินค้า</p>
+                </div>
+            </div>
+
+            <!-- Tab: ธีมสี -->
+            <div id="adminSettingsTab-theme" class="admin-settings-tab-panel hidden">
+                <div class="mb-5">
+                    <p class="text-xs font-semibold text-gray-400 mb-2" data-i18n="adminThemeModeLabel">โหมดสี</p>
+                    <button onclick="toggleTheme()"
+                        class="text-xs bg-slate-800 hover:bg-slate-700 text-gray-200 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-circle-half-stroke"></i> <span data-i18n="adminThemeModeToggle">สลับโหมดสว่าง / มืด</span>
+                    </button>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-gray-400 mb-2" data-i18n="adminThemeColorLabel">โทนสีเว็บ
+                        (เปลี่ยนทั้งเว็บ รวมโลโก้)</p>
+                    <div id="themeColorSwatches" class="flex flex-wrap gap-3"></div>
+                </div>
+            </div>
+
+            <!-- Tab: ผู้ใช้ออนไลน์ -->
+            <div id="adminSettingsTab-online" class="admin-settings-tab-panel hidden">
+                <p class="text-[11px] text-gray-500 mb-3" data-i18n="adminOnlineHint">บัญชีที่ใช้งานเว็บอยู่ในตอนนี้
+                    (อัปเดตแบบเรียลไทม์)</p>
+                <div id="onlineUsersListBody" class="space-y-2"></div>
+                <p id="onlineUsersEmpty" class="text-center text-gray-500 text-xs py-6 hidden"
+                    data-i18n="adminOnlineEmpty">ยังไม่มีใครออนไลน์</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer Section -->
     <footer class="bg-slate-900 border-t border-slate-800 text-gray-400 text-xs mt-16 relative z-10">
         <!-- Upper Footer: Team Members Section (8 คน) -->
         <div class="max-w-7xl mx-auto px-4 py-10 border-b border-slate-800/80">
             <div class="flex items-center gap-2 mb-6">
-                <div class="w-1.5 h-6 bg-cyan-400 rounded-full"></div>
+                <div class="w-1.5 h-6 bg-[var(--theme-400)] rounded-full"></div>
                 <h3 class="text-lg font-bold text-white tracking-wide">สมาชิก</h3>
             </div>
 
@@ -817,9 +965,9 @@
 
                 <!-- สมาชิกคนที่ 1 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+1&background=0D8ABC&color=fff'"
                             alt="Member 1" class="w-full h-full object-cover">
@@ -834,9 +982,9 @@
 
                 <!-- สมาชิกคนที่ 2 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/นฤเบศร.png" alt="Member 2" class="w-full h-full object-cover">
                     </div>
                     <span class="font-bold text-white text-xs truncate w-full">นฤเบศร เครือวัลย์</span>
@@ -849,9 +997,9 @@
 
                 <!-- สมาชิกคนที่ 3 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro1.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+3&background=0D8ABC&color=fff'"
                             alt="Member 3" class="w-full h-full object-cover">
@@ -866,9 +1014,9 @@
 
                 <!-- สมาชิกคนที่ 4 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro2.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+4&background=0D8ABC&color=fff'"
                             alt="Member 4" class="w-full h-full object-cover">
@@ -883,9 +1031,9 @@
 
                 <!-- สมาชิกคนที่ 5 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro3.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+5&background=0D8ABC&color=fff'"
                             alt="Member 5" class="w-full h-full object-cover">
@@ -900,9 +1048,9 @@
 
                 <!-- สมาชิกคนที่ 6 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro4.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+6&background=0D8ABC&color=fff'"
                             alt="Member 6" class="w-full h-full object-cover">
@@ -917,9 +1065,9 @@
 
                 <!-- สมาชิกคนที่ 7 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro5.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+7&background=0D8ABC&color=fff'"
                             alt="Member 7" class="w-full h-full object-cover">
@@ -934,9 +1082,9 @@
 
                 <!-- สมาชิกคนที่ 8 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro6.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+8&background=0D8ABC&color=fff'"
                             alt="Member 8" class="w-full h-full object-cover">
@@ -950,9 +1098,9 @@
                 </div>
                 <!-- สมาชิกคนที่ 9 -->
                 <div
-                    class="bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
+                    class="bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-xl p-3 flex flex-col items-center text-center transition group">
                     <div
-                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-400 transition shrink-0">
+                        class="w-12 h-12 rounded-full overflow-hidden mb-2 border border-slate-700 group-hover:border-[var(--theme-400)] transition shrink-0">
                         <img src="photo/pro7.jpg"
                             onerror="this.src='https://ui-avatars.com/api/?name=Member+8&background=0D8ABC&color=fff'"
                             alt="Member 8" class="w-full h-full object-cover">
@@ -973,7 +1121,7 @@
             <!-- Brand Info Column -->
             <div class="md:col-span-2 space-y-3">
                 <a href="#" class="text-2xl font-black italic tracking-wider text-white">
-                    COM <span class="text-cyan-400">PANG</span>
+                    COM <span class="text-[var(--theme-400)]">PANG</span>
                 </a>
                 <p class="text-xs text-gray-400 leading-relaxed max-w-sm">
                     ถ้าคุณชอบคอมพิวเตอร์ เราคือเพื่อนกัน COM PANG ศูนย์รวมคอมพิวเตอร์ประกอบ อุปกรณ์เกมมิ่งเกียร์
@@ -983,104 +1131,104 @@
 
             <!-- Contact Team: อีเมล/เบอร์โทรทีมงานทั้ง 8 คน แทนคอลัมน์หมวดหมู่/บริการ/ติดต่อร้านค้าเดิม -->
             <div class="md:col-span-3 space-y-3">
-                <h4 class="font-bold text-white text-sm mb-3 border-l-2 border-cyan-400 pl-2">ติดต่อทีมงาน</h4>
+                <h4 class="font-bold text-white text-sm mb-3 border-l-2 border-[var(--theme-400)] pl-2">ติดต่อทีมงาน</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">ชินวุฒิ แรกคำนวน</p>
-                            <a href="mailto:chinawut@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> chinawut@compang.com</a>
+                            <a href="mailto:chinawut@compang.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i> chinawut@compang.com</a>
                             <a href="tel:0631390452" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-111-1111</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">นฤเบศร เครือวัลย์</p>
-                            <a href="mailto:narubet@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i>mailto:narubet@compang.com</a>
+                            <a href="mailto:narubet@compang.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i>mailto:narubet@compang.com</a>
                             <a href="tel:0802222222" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 0802222222</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">ณัฐพล ไทยเจริญ </p>
-                            <a href="nattaprom7886@gmail.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> w8256647@gmail.com</a>
+                            <a href="nattaprom7886@gmail.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i> w8256647@gmail.com</a>
                             <a href="tel:0832431894" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i>0832431894</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">วรวิทย์ เต็มพร้อม</p>
-                            <a href="w8256647@gmail.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> member4@compang.com</a>
+                            <a href="w8256647@gmail.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i> member4@compang.com</a>
                             <a href="tel:0635161931" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 080-444-4444</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">ณัฐนนท์ กลแกม</p>
-                            <a href="gtr79880@gmail.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> gtr79880@gmail.com</a>
+                            <a href="gtr79880@gmail.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i> gtr79880@gmail.com</a>
                             <a href="tel:0620769871" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i>0620769871</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">ปภาวรินทร์ พันธ์ด้อหล้า</p>
-                            <a href="ppandohla@gmail.con" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i>ppandohla@gmail.con</a>
+                            <a href="ppandohla@gmail.con" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i>ppandohla@gmail.con</a>
                             <a href="tel:0630718231" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i>0630718231</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">ธันยวิชญ์ ปานชาตรี</p>
-                            <a href="Panchatrithanywichy@gmail.com " class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i>Panchatrithanywichy@gmail.com</a>
+                            <a href="Panchatrithanywichy@gmail.com " class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i>Panchatrithanywichy@gmail.com</a>
                             <a href="tel:0650679476" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 0650679476</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">คีรติ ซ้ายชูจีน</p>
-                            <a href="member8@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> mailto:knukaeng@gmail.com</a>
+                            <a href="member8@compang.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i> mailto:knukaeng@gmail.com</a>
                             <a href="tel:0918151010" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i> 0918151010</a>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 rounded-lg px-3 py-2 transition group">
-                        <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition">
-                            <i class="fa-solid fa-user text-cyan-400 text-[11px]"></i>
+                    <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 hover:border-[var(--theme-500)]/50 rounded-lg px-3 py-2 transition group">
+                        <div class="w-7 h-7 rounded-full bg-[var(--theme-500)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--theme-500)]/20 transition">
+                            <i class="fa-solid fa-user text-[var(--theme-400)] text-[11px]"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-white font-bold text-[11px] truncate">เนตรอัปสร ลายปาน</p>
-                            <a href="mailto:member8@compang.com" class="block text-[10px] text-gray-400 hover:text-cyan-400 truncate transition"><i class="fa-solid fa-envelope w-3 text-cyan-400/70"></i> netrxapsr94@gmail.com</a>
+                            <a href="mailto:member8@compang.com" class="block text-[10px] text-gray-400 hover:text-[var(--theme-400)] truncate transition"><i class="fa-solid fa-envelope w-3 text-[var(--theme-400)]/70"></i> netrxapsr94@gmail.com</a>
                             <a href="tel:0808888888" class="block text-[10px] text-gray-400 hover:text-emerald-400 truncate transition"><i class="fa-solid fa-phone w-3 text-emerald-400/70"></i>0951791541</a>
                         </div>
                     </div>
@@ -1095,6 +1243,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <!-- 2. เชื่อมต่อฐานข้อมูลโดยใช้คีย์ของคุณ -->
     <script>
@@ -1103,6 +1252,7 @@
             authDomain: "compung-shop.firebaseapp.com",
             projectId: "compung-shop",
             storageBucket: "compung-shop.firebasestorage.app",
+            databaseURL: "https://compung-shop-default-rtdb.firebaseio.com",
             messagingSenderId: "389619507222",
             appId: "1:389619507222:web:af1db8418b3c268a4c5537",
             measurementId: "G-17CTJ5L7Y2"
@@ -1116,6 +1266,11 @@
 
         // ตัวแปร auth สำหรับระบบสมัคร/เข้าสู่ระบบจริง
         const auth = firebase.auth();
+
+        // ตัวแปร rtdb (Realtime Database) ใช้เฉพาะระบบเช็คสถานะ "ออนไลน์อยู่ตอนนี้" (presence)
+        // เพราะมี onDisconnect() ที่เซิร์ฟเวอร์ Firebase เป็นคนจัดการให้เอง แม่นยำกว่า Firestore
+        // เวลาแท็บถูกปิดกะทันหัน/เน็ตหลุด/แบตหมด ก็ยังลบสถานะออนไลน์ให้อัตโนมัติ
+        const rtdb = firebase.database();
     </script>
 
     <!-- ไฟล์ script.js เดิมของคุณจะอยู่ต่อท้ายตรงนี้ -->

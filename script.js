@@ -194,6 +194,22 @@ const translations = {
         catNotebook: "โน้ตบุ๊ก",
         catMonitor: "จอภาพ",
         adminManage: "จัดการสินค้า (Admin)",
+        adminSettings: "ตั้งค่า (Admin)",
+        adminSettingsTitle: "ตั้งค่า (Admin)",
+        adminTabProducts: "รายการสินค้าทั้งหมด",
+        adminTabTheme: "ธีมสี",
+        adminTabOnline: "ผู้ใช้ออนไลน์",
+        adminProductSearchPlaceholder: "ค้นหาสินค้าตามชื่อ/แบรนด์...",
+        adminColProduct: "สินค้า",
+        adminColCategory: "หมวดหมู่",
+        adminColPrice: "ราคา",
+        adminColAction: "จัดการ",
+        adminProductsListEmpty: "ไม่พบสินค้า",
+        adminThemeModeLabel: "โหมดสี",
+        adminThemeModeToggle: "สลับโหมดสว่าง / มืด",
+        adminThemeColorLabel: "โทนสีเว็บ (เปลี่ยนทั้งเว็บ รวมโลโก้)",
+        adminOnlineHint: "บัญชีที่ใช้งานเว็บอยู่ในตอนนี้ (อัปเดตแบบเรียลไทม์)",
+        adminOnlineEmpty: "ยังไม่มีใครออนไลน์",
         recommendedProducts: "รายการสินค้าแนะนำ",
         hotProducts: "รายการสินค้ายอดฮิต",
         normalProducts: "สินค้าทั่วไป",
@@ -275,6 +291,22 @@ const translations = {
         catNotebook: "Laptop",
         catMonitor: "Monitor",
         adminManage: "Manage Products (Admin)",
+        adminSettings: "Settings (Admin)",
+        adminSettingsTitle: "Settings (Admin)",
+        adminTabProducts: "All Products",
+        adminTabTheme: "Theme Color",
+        adminTabOnline: "Online Users",
+        adminProductSearchPlaceholder: "Search by name/brand...",
+        adminColProduct: "Product",
+        adminColCategory: "Category",
+        adminColPrice: "Price",
+        adminColAction: "Actions",
+        adminProductsListEmpty: "No products found",
+        adminThemeModeLabel: "Color Mode",
+        adminThemeModeToggle: "Toggle Light / Dark",
+        adminThemeColorLabel: "Site Theme Color (changes site-wide, incl. logo)",
+        adminOnlineHint: "Accounts currently active on the site (real-time)",
+        adminOnlineEmpty: "No one online right now",
         recommendedProducts: "Recommended Products",
         hotProducts: "Best-Selling Products",
         normalProducts: "General Products",
@@ -356,6 +388,22 @@ const translations = {
         catNotebook: "笔记本电脑",
         catMonitor: "显示器",
         adminManage: "商品管理 (管理员)",
+        adminSettings: "设置（管理员）",
+        adminSettingsTitle: "设置（管理员）",
+        adminTabProducts: "所有商品",
+        adminTabTheme: "主题颜色",
+        adminTabOnline: "在线用户",
+        adminProductSearchPlaceholder: "按名称/品牌搜索...",
+        adminColProduct: "商品",
+        adminColCategory: "分类",
+        adminColPrice: "价格",
+        adminColAction: "操作",
+        adminProductsListEmpty: "未找到商品",
+        adminThemeModeLabel: "颜色模式",
+        adminThemeModeToggle: "切换浅色 / 深色",
+        adminThemeColorLabel: "网站主题色（全站生效，含Logo）",
+        adminOnlineHint: "当前在线账号（实时更新）",
+        adminOnlineEmpty: "目前没有人在线",
         recommendedProducts: "推荐商品",
         hotProducts: "热销商品",
         normalProducts: "全部商品",
@@ -437,6 +485,22 @@ const translations = {
         catNotebook: "Ноутбуки",
         catMonitor: "Мониторы",
         adminManage: "Управление (Админ)",
+        adminSettings: "Настройки (Админ)",
+        adminSettingsTitle: "Настройки (Админ)",
+        adminTabProducts: "Все товары",
+        adminTabTheme: "Цвет темы",
+        adminTabOnline: "Пользователи онлайн",
+        adminProductSearchPlaceholder: "Поиск по названию/бренду...",
+        adminColProduct: "Товар",
+        adminColCategory: "Категория",
+        adminColPrice: "Цена",
+        adminColAction: "Действия",
+        adminProductsListEmpty: "Товары не найдены",
+        adminThemeModeLabel: "Цветовой режим",
+        adminThemeModeToggle: "Переключить светлый / тёмный",
+        adminThemeColorLabel: "Цвет темы сайта (меняет весь сайт, включая логотип)",
+        adminOnlineHint: "Аккаунты, активные на сайте сейчас (в реальном времени)",
+        adminOnlineEmpty: "Сейчас никого нет онлайн",
         recommendedProducts: "Рекомендуемые товары",
         hotProducts: "Хиты продаж",
         normalProducts: "Обычные товары",
@@ -643,7 +707,7 @@ function renderProducts(items, gridId = 'productGrid') {
         const soldLabel = sold >= 1000 ? (sold / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : sold;
 
         return `
-        <div onclick="goToProduct('${p.id}')" class="product-card cursor-pointer w-64 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col hover:border-cyan-500/60 hover:-translate-y-1 transition-all duration-300 group shadow-lg relative">
+        <div onclick="goToProduct('${p.id}')" class="product-card cursor-pointer w-64 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col hover:border-[var(--theme-500)]/60 hover:-translate-y-1 transition-all duration-300 group shadow-lg relative">
 
             ${isCurrentUserAdmin() ? `
             <div class="absolute top-3 right-3 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition duration-200">
@@ -656,14 +720,14 @@ function renderProducts(items, gridId = 'productGrid') {
             </div>` : ''}
 
             <div class="flex justify-between items-center mb-1">
-                <span class="text-[10px] font-bold text-cyan-500 uppercase tracking-wide">${p.brand}</span>
+                <span class="text-[10px] font-bold text-[var(--theme-500)] uppercase tracking-wide">${p.brand}</span>
             </div>
 
             <div class="relative overflow-hidden rounded-xl mb-3 bg-gradient-to-br from-slate-100 via-white to-slate-200 h-36 w-full flex items-center justify-center shrink-0 shadow-inner">
                 <img src="${p.img}" alt="${p.name}" class="object-contain w-full h-full p-4 mix-blend-multiply group-hover:scale-105 transition duration-500">
             </div>
 
-            <h3 class="font-bold text-sm text-white line-clamp-2 h-10 mb-1 leading-tight group-hover:text-cyan-400 transition" title="${p.name}">
+            <h3 class="font-bold text-sm text-white line-clamp-2 h-10 mb-1 leading-tight group-hover:text-[var(--theme-400)] transition" title="${p.name}">
                 ${p.name}
             </h3>
 
@@ -675,11 +739,11 @@ function renderProducts(items, gridId = 'productGrid') {
                 <div class="flex justify-between items-center h-4 mb-0.5">
                     ${hasDiscount ? `<span class="text-xs text-gray-500 line-through">฿${p.oldPrice.toLocaleString()}</span>` : `<span></span>`}
                     <span class="warranty-badge flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                        <i class="fa-solid fa-shield-halved text-cyan-400"></i> ประกัน ${warranty}
+                        <i class="fa-solid fa-shield-halved text-[var(--theme-400)]"></i> ประกัน ${warranty}
                     </span>
                 </div>
                 <div class="flex justify-between items-end mb-2">
-                    <span class="text-xl font-black text-cyan-400">฿${p.price.toLocaleString()}</span>
+                    <span class="text-xl font-black text-[var(--theme-400)]">฿${p.price.toLocaleString()}</span>
                     <span class="text-[10px] text-emerald-500 font-semibold">จัดส่งฟรี</span>
                 </div>
             </div>
@@ -688,7 +752,7 @@ function renderProducts(items, gridId = 'productGrid') {
                 ${hasDiscount ? `<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">-฿${discountAmount.toLocaleString()}</span>` : `<span class="text-[10px] text-gray-500">*ราคาเฉพาะออนไลน์</span>`}
             </div>
 
-            <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
+            <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="buy-btn w-full bg-gradient-to-r from-[var(--theme-500)] to-blue-600 hover:from-[var(--theme-400)] hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-[var(--theme-500)]/20 transition duration-200">
                 <i class="fa-solid fa-cart-shopping"></i> ${translations[currentLang].buyNow}
             </button>
         </div>
@@ -821,7 +885,7 @@ function renderGamingGearGrid(page) {
         const soldLabel = sold >= 1000 ? (sold / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : sold;
 
         return `
-        <div onclick="goToProduct('${p.id}')" class="product-card cursor-pointer w-full bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col hover:border-cyan-500/60 hover:-translate-y-1 transition-all duration-300 group shadow-lg relative">
+        <div onclick="goToProduct('${p.id}')" class="product-card cursor-pointer w-full bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col hover:border-[var(--theme-500)]/60 hover:-translate-y-1 transition-all duration-300 group shadow-lg relative">
 
             ${isCurrentUserAdmin() ? `
             <div class="absolute top-3 right-3 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition duration-200">
@@ -834,14 +898,14 @@ function renderGamingGearGrid(page) {
             </div>` : ''}
 
             <div class="flex justify-between items-center mb-1">
-                <span class="text-[10px] font-bold text-cyan-500 uppercase tracking-wide">${p.brand}</span>
+                <span class="text-[10px] font-bold text-[var(--theme-500)] uppercase tracking-wide">${p.brand}</span>
             </div>
 
             <div class="relative overflow-hidden rounded-xl mb-3 bg-gradient-to-br from-slate-100 via-white to-slate-200 h-36 w-full flex items-center justify-center shrink-0 shadow-inner">
                 <img src="${p.img}" alt="${p.name}" class="object-contain w-full h-full p-4 mix-blend-multiply group-hover:scale-105 transition duration-500">
             </div>
 
-            <h3 class="font-bold text-sm text-white line-clamp-2 h-10 mb-1 leading-tight group-hover:text-cyan-400 transition" title="${p.name}">
+            <h3 class="font-bold text-sm text-white line-clamp-2 h-10 mb-1 leading-tight group-hover:text-[var(--theme-400)] transition" title="${p.name}">
                 ${p.name}
             </h3>
 
@@ -853,11 +917,11 @@ function renderGamingGearGrid(page) {
                 <div class="flex justify-between items-center h-4 mb-0.5">
                     ${hasDiscount ? `<span class="text-xs text-gray-500 line-through">฿${p.oldPrice.toLocaleString()}</span>` : `<span></span>`}
                     <span class="warranty-badge flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                        <i class="fa-solid fa-shield-halved text-cyan-400"></i> ประกัน ${warranty}
+                        <i class="fa-solid fa-shield-halved text-[var(--theme-400)]"></i> ประกัน ${warranty}
                     </span>
                 </div>
                 <div class="flex justify-between items-end mb-2">
-                    <span class="text-xl font-black text-cyan-400">฿${p.price.toLocaleString()}</span>
+                    <span class="text-xl font-black text-[var(--theme-400)]">฿${p.price.toLocaleString()}</span>
                     <span class="text-[10px] text-emerald-500 font-semibold">จัดส่งฟรี</span>
                 </div>
             </div>
@@ -866,7 +930,7 @@ function renderGamingGearGrid(page) {
                 ${hasDiscount ? `<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">-฿${discountAmount.toLocaleString()}</span>` : `<span class="text-[10px] text-gray-500">*ราคาเฉพาะออนไลน์</span>`}
             </div>
 
-            <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="buy-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 transition duration-200">
+            <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="buy-btn w-full bg-gradient-to-r from-[var(--theme-500)] to-blue-600 hover:from-[var(--theme-400)] hover:to-blue-500 text-white font-black py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-[var(--theme-500)]/20 transition duration-200">
                 <i class="fa-solid fa-cart-shopping"></i> ${translations[currentLang].buyNow}
             </button>
         </div>
@@ -899,7 +963,7 @@ function renderGamingGearPagination(totalItems, totalPages) {
         const isActive = i === gamingGearCurrentPage;
         buttonsHtml += `
         <button onclick="goToGamingGearPage(${i})"
-            class="w-9 h-9 rounded-lg text-sm font-bold transition ${isActive ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            class="w-9 h-9 rounded-lg text-sm font-bold transition ${isActive ? 'bg-[var(--theme-500)] text-slate-950 shadow-md shadow-[var(--theme-500)]/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
             ${i}
         </button>`;
     }
@@ -961,8 +1025,8 @@ function initSidebarFilters() {
             brandListEl.innerHTML = `<p class="text-[11px] text-gray-500">ไม่พบแบรนด์ในหมวดหมู่นี้</p>`;
         } else {
             brandListEl.innerHTML = brands.map(b => `
-                <label class="flex items-center gap-2 text-xs text-gray-300 hover:text-cyan-400 cursor-pointer py-1">
-                    <input type="checkbox" value="${b}" class="filter-brand-checkbox w-3.5 h-3.5 accent-cyan-500" onchange="renderGamingGearGrid()">
+                <label class="flex items-center gap-2 text-xs text-gray-300 hover:text-[var(--theme-400)] cursor-pointer py-1">
+                    <input type="checkbox" value="${b}" class="filter-brand-checkbox w-3.5 h-3.5 accent-[var(--theme-500)]" onchange="renderGamingGearGrid()">
                     ${b}
                 </label>
             `).join('');
@@ -1019,7 +1083,7 @@ function renderProductDetailPage() {
             <div class="col-span-2 text-center py-20 text-gray-400">
                 <i class="fa-solid fa-box-open text-4xl mb-3"></i>
                 <p class="text-sm">ไม่พบสินค้าที่คุณต้องการ</p>
-                <a href="index.html" class="text-cyan-400 hover:underline text-xs mt-2 inline-block">&larr; กลับสู่หน้าแรก</a>
+                <a href="index.html" class="text-[var(--theme-400)] hover:underline text-xs mt-2 inline-block">&larr; กลับสู่หน้าแรก</a>
             </div>`;
         const relatedGrid = document.getElementById('relatedProductsGrid');
         if (relatedGrid) relatedGrid.innerHTML = '';
@@ -1031,9 +1095,9 @@ function renderProductDetailPage() {
     const breadcrumb = document.getElementById('productBreadcrumb');
     if (breadcrumb) {
         breadcrumb.innerHTML = `
-            <a href="index.html" class="hover:text-cyan-400 transition">หน้าหลัก</a>
+            <a href="index.html" class="hover:text-[var(--theme-400)] transition">หน้าหลัก</a>
             <i class="fa-solid fa-chevron-right text-[8px]"></i>
-            <span class="text-cyan-400 truncate max-w-[220px] sm:max-w-none">${product.name}</span>
+            <span class="text-[var(--theme-400)] truncate max-w-[220px] sm:max-w-none">${product.name}</span>
         `;
     }
 
@@ -1054,7 +1118,7 @@ function renderProductDetailPage() {
             <h1 class="text-xl sm:text-2xl font-bold text-white leading-snug mb-2">${product.name}</h1>
 
             <div class="flex items-center gap-3 text-xs text-gray-400 mb-4">
-                <span>แบรนด์: <span class="text-cyan-400 font-semibold">${product.brand}</span></span>
+                <span>แบรนด์: <span class="text-[var(--theme-400)] font-semibold">${product.brand}</span></span>
             </div>
 
             <div class="flex items-center gap-3 mb-1">
@@ -1063,13 +1127,13 @@ function renderProductDetailPage() {
                     <i class="fa-regular fa-heart"></i>
                 </button>
                 <button onclick="event.stopPropagation()" title="แชร์ Facebook"
-                    class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 hover:text-cyan-400 flex items-center justify-center transition">
+                    class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 hover:text-[var(--theme-400)] flex items-center justify-center transition">
                     <i class="fa-brands fa-facebook-f"></i>
                 </button>
             </div>
 
             <div class="flex items-end gap-3 border-t border-slate-800 pt-4 mt-4">
-                <span class="text-3xl font-black text-cyan-400">฿${product.price.toLocaleString()}</span>
+                <span class="text-3xl font-black text-[var(--theme-400)]">฿${product.price.toLocaleString()}</span>
                 ${hasDiscount ? `
                 <span class="text-base text-gray-500 line-through mb-1">฿${product.oldPrice.toLocaleString()}</span>
                 <span class="bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md mb-1">-${discountPercent}%</span>
@@ -1078,7 +1142,7 @@ function renderProductDetailPage() {
 
             <div class="flex items-center gap-3 mt-3 text-[11px] text-gray-400 flex-wrap">
                 <span class="warranty-badge flex items-center gap-1 px-2 py-1 rounded-full">
-                    <i class="fa-solid fa-shield-halved text-cyan-400"></i> ประกัน ${warranty}
+                    <i class="fa-solid fa-shield-halved text-[var(--theme-400)]"></i> ประกัน ${warranty}
                 </span>
                 <span class="flex items-center gap-1 text-emerald-500 font-semibold">
                     <i class="fa-solid fa-truck-fast"></i> จัดส่งฟรี
@@ -1097,11 +1161,11 @@ function renderProductDetailPage() {
 
             <div class="flex gap-3 mt-5">
                 <button onclick="addToCartFromDetail('${product.id}')"
-                    class="flex-1 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/10 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition">
+                    class="flex-1 border border-[var(--theme-500)] text-[var(--theme-400)] hover:bg-[var(--theme-500)]/10 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition">
                     <i class="fa-solid fa-bag-shopping"></i> เพิ่มในตะกร้า
                 </button>
                 <button onclick="buyNowFromDetail('${product.id}')"
-                    class="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition">
+                    class="flex-1 bg-gradient-to-r from-[var(--theme-500)] to-blue-600 hover:from-[var(--theme-400)] hover:to-blue-500 text-white font-black py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-[var(--theme-500)]/20 transition">
                     <i class="fa-solid fa-bolt"></i> ซื้อเลย
                 </button>
             </div>
@@ -1297,7 +1361,7 @@ function renderCartItems() {
                 <img src="${item.img}" class="w-12 h-12 object-contain rounded-lg bg-gradient-to-br from-slate-100 to-white p-1 mix-blend-multiply">
                 <div class="flex-1 min-w-0">
                     <h4 class="text-xs font-bold text-white truncate">${item.name}</h4>
-                    <p class="text-xs text-cyan-400 font-bold">฿${item.price.toLocaleString()}</p>
+                    <p class="text-xs text-[var(--theme-400)] font-bold">฿${item.price.toLocaleString()}</p>
                     <div class="flex items-center gap-2 mt-1">
                         <button onclick="changeQuantity('${item.id}', -1)" class="w-5 h-5 bg-slate-800 text-gray-300 rounded hover:bg-slate-700 flex items-center justify-center text-xs">-</button>
                         <span class="text-xs font-bold">${item.quantity}</span>
@@ -1398,7 +1462,7 @@ function ensurePaymentModalMarkup() {
                 <img id="paymentQrImage" src="" alt="QR Code ชำระเงิน" style="width:220px;height:220px;display:block;">
             </div>
 
-            <p style="color:#22d3ee; font-weight:800; font-size:22px; margin-bottom:4px;" id="paymentModalAmount">฿0</p>
+            <p style="color:var(--theme-400); font-weight:800; font-size:22px; margin-bottom:4px;" id="paymentModalAmount">฿0</p>
             <p style="color:#64748b; font-size:11px; margin-bottom:16px;">รหัสอ้างอิง: <span id="paymentModalRef"></span></p>
 
             <div style="background:#020617; border:1px solid #1e293b; border-radius:12px; padding:10px 14px; margin-bottom:16px;">
@@ -1782,7 +1846,7 @@ function switchCartTab(tab) {
         return;
     }
 
-    const activeClass = "flex-1 py-2.5 text-xs sm:text-sm font-bold text-cyan-400 border-b-2 border-cyan-400 transition";
+    const activeClass = "flex-1 py-2.5 text-xs sm:text-sm font-bold text-[var(--theme-400)] border-b-2 border-[var(--theme-400)] transition";
     const inactiveClass = "flex-1 py-2.5 text-xs sm:text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-200 transition";
 
     if (tab === 'history') {
@@ -1821,7 +1885,7 @@ function renderOrderHistory() {
         const itemsHtml = (order.items || []).map(item => `
             <div class="flex items-center justify-between text-[11px] text-gray-300 py-0.5">
                 <span class="truncate pr-2">${item.name} <span class="text-gray-500">x${item.quantity}</span></span>
-                <span class="text-cyan-400 font-semibold whitespace-nowrap">฿${(item.price * item.quantity).toLocaleString()}</span>
+                <span class="text-[var(--theme-400)] font-semibold whitespace-nowrap">฿${(item.price * item.quantity).toLocaleString()}</span>
             </div>
         `).join('');
 
@@ -1839,7 +1903,7 @@ function renderOrderHistory() {
                 </div>
                 <div class="flex justify-between items-center border-t border-slate-800 mt-2 pt-2">
                     <span class="text-xs font-bold text-gray-300">${translations[currentLang].totalPrice}</span>
-                    <span class="text-sm font-black text-cyan-400">฿${order.total.toLocaleString()}</span>
+                    <span class="text-sm font-black text-[var(--theme-400)]">฿${order.total.toLocaleString()}</span>
                 </div>
             </div>
         `;
@@ -2089,10 +2153,16 @@ auth.onAuthStateChanged(async (user) => {
 
         // โหลดประวัติการสั่งซื้อของบัญชีนี้
         await loadOrderHistoryFromFirestore();
+
+        // เริ่มส่งสถานะ "ออนไลน์อยู่" ให้แอดมินเห็นได้ในหน้าตั้งค่า
+        if (typeof startPresenceHeartbeat === 'function') startPresenceHeartbeat(currentUser, currentUserData);
     } else {
         currentUserData = null;
         cart = [];
         orderHistory = [];
+
+        // ออกจากระบบแล้ว หยุดส่งสถานะออนไลน์
+        if (typeof stopPresenceHeartbeat === 'function') stopPresenceHeartbeat();
     }
 
     updateUserUI(currentUser, currentUserData);
@@ -2132,7 +2202,7 @@ function updateSlider() {
 
     dots.forEach((dot, index) => {
         dot.className = index === currentSlideIndex
-            ? "w-8 h-3 rounded-full bg-cyan-400 transition-all duration-300"
+            ? "w-8 h-3 rounded-full bg-[var(--theme-400)] transition-all duration-300"
             : "w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all duration-300";
     });
 }
@@ -2210,7 +2280,7 @@ function updatePromoSlider(id) {
 
     dots.forEach((dot, index) => {
         dot.className = index === promoState[id].index
-            ? "w-6 h-2.5 rounded-full bg-cyan-400 transition-all duration-300 shadow-md"
+            ? "w-6 h-2.5 rounded-full bg-[var(--theme-400)] transition-all duration-300 shadow-md"
             : "w-2.5 h-2.5 rounded-full bg-white/40 hover:bg-white transition-all duration-300";
     });
 }
@@ -2279,6 +2349,264 @@ document.addEventListener('DOMContentLoaded', () => {
         updateThemeIcons(true);
     }
 });
+
+// ==========================================
+// THEME COLOR SYSTEM (สลับโทนสีเว็บทั้งเว็บ รวมโลโก้ — ทำงานผ่าน CSS Variable)
+// เว็บทั้งหมดใช้ text-[var(--theme-400)] / bg-[var(--theme-500)] ฯลฯ แทนสี cyan ตรงๆ
+// ฟังก์ชันนี้แค่เปลี่ยนค่าตัวแปร CSS บน :root สีทั้งเว็บก็เปลี่ยนตามทันทีโดยไม่ต้อง reload
+// ==========================================
+const THEME_COLOR_KEY = 'compung_theme_color';
+
+// ค่าสีอ้างอิงจาก Tailwind default palette (shade 400 / 500) ของแต่ละโทนสีที่แอดมินเลือกได้
+const THEME_COLOR_PALETTE = {
+    cyan:   { label: 'ฟ้า',     400: '#22d3ee', 500: '#06b6d4', rgb400: '34, 211, 238',  rgb500: '6, 182, 212' },
+    green:  { label: 'เขียว',   400: '#4ade80', 500: '#22c55e', rgb400: '74, 222, 128',  rgb500: '34, 197, 94' },
+    purple: { label: 'ม่วง',    400: '#c084fc', 500: '#a855f7', rgb400: '192, 132, 252', rgb500: '168, 85, 247' },
+    red:    { label: 'แดง',     400: '#f87171', 500: '#ef4444', rgb400: '248, 113, 113', rgb500: '239, 68, 68' },
+    orange: { label: 'ส้ม',     400: '#fb923c', 500: '#f97316', rgb400: '251, 146, 60',  rgb500: '249, 115, 22' },
+    pink:   { label: 'ชมพู',    400: '#f472b6', 500: '#ec4899', rgb400: '244, 114, 182', rgb500: '236, 72, 153' },
+    blue:   { label: 'น้ำเงิน', 400: '#60a5fa', 500: '#3b82f6', rgb400: '96, 165, 250',  rgb500: '59, 130, 246' }
+};
+
+// เปลี่ยนสีธีมทั้งเว็บ (colorKey = 'cyan' | 'green' | 'purple' | 'red' | 'orange' | 'pink' | 'blue')
+function applyThemeColor(colorKey, persist = true) {
+    const palette = THEME_COLOR_PALETTE[colorKey] || THEME_COLOR_PALETTE.cyan;
+    const root = document.documentElement.style;
+    root.setProperty('--theme-400', palette[400]);
+    root.setProperty('--theme-500', palette[500]);
+    root.setProperty('--theme-400-rgb', palette.rgb400);
+    root.setProperty('--theme-500-rgb', palette.rgb500);
+
+    if (persist) {
+        try { localStorage.setItem(THEME_COLOR_KEY, colorKey); } catch (e) { /* localStorage ปิดอยู่ ข้ามได้ */ }
+    }
+
+    // อัปเดตวงกลมไหนถูกเลือกอยู่ในหน้าตั้งค่า (ถ้าเปิดโมดัลอยู่)
+    document.querySelectorAll('.theme-swatch-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.colorKey === colorKey);
+    });
+}
+
+// สร้างวงกลมเลือกสีในแท็บ "ธีมสี" ของ Admin Settings Modal
+function renderThemeColorSwatches() {
+    const container = document.getElementById('themeColorSwatches');
+    if (!container) return;
+
+    const currentColor = (() => {
+        try { return localStorage.getItem(THEME_COLOR_KEY) || 'cyan'; } catch (e) { return 'cyan'; }
+    })();
+
+    container.innerHTML = Object.keys(THEME_COLOR_PALETTE).map(key => {
+        const c = THEME_COLOR_PALETTE[key];
+        const isActive = key === currentColor ? 'active' : '';
+        return `<button type="button" class="theme-swatch-btn ${isActive}" data-color-key="${key}"
+                    style="background:${c[500]};" title="${c.label}"
+                    onclick="applyThemeColor('${key}')"></button>`;
+    }).join('');
+}
+
+// เรียกตอนโหลดหน้าเว็บทุกครั้ง เพื่อให้สีธีมที่แอดมินเคยเลือกไว้คงอยู่ (script.js โหลดหลัง inline script ใน <head> ไปแล้ว
+// ฉะนั้น :root ถูกตั้งค่าล่วงหน้าไปแล้วรอบนึง อันนี้แค่ sync ให้ตรงกันอีกรอบเผื่อกรณี localStorage เปลี่ยนระหว่างทาง)
+function initThemeColor() {
+    let saved = 'cyan';
+    try { saved = localStorage.getItem(THEME_COLOR_KEY) || 'cyan'; } catch (e) { /* ใช้ค่า default */ }
+    applyThemeColor(saved, false);
+}
+document.addEventListener('DOMContentLoaded', initThemeColor);
+
+// ==========================================
+// ADMIN SETTINGS MODAL (รายการสินค้าทั้งหมด / ธีมสี / ผู้ใช้ออนไลน์)
+// ==========================================
+function openAdminSettingsModal() {
+    if (!isCurrentUserAdmin()) {
+        console.warn('บล็อก: ต้องเป็น admin เท่านั้นถึงจะเปิดหน้าตั้งค่านี้ได้');
+        return;
+    }
+    const modal = document.getElementById('adminSettingsModal');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    switchAdminSettingsTab('products');
+    renderThemeColorSwatches();
+    startOnlineUsersListener();
+}
+
+function closeAdminSettingsModal() {
+    const modal = document.getElementById('adminSettingsModal');
+    if (modal) modal.classList.add('hidden');
+    stopOnlineUsersListener();
+}
+
+function switchAdminSettingsTab(tabName) {
+    ['products', 'theme', 'online'].forEach(name => {
+        const panel = document.getElementById(`adminSettingsTab-${name}`);
+        const btn = document.getElementById(`adminTabBtn-${name}`);
+        if (panel) panel.classList.toggle('hidden', name !== tabName);
+        if (btn) btn.classList.toggle('active', name === tabName);
+    });
+
+    if (tabName === 'products') renderAdminProductsList();
+}
+
+// เรนเดอร์ตารางรายการสินค้าทั้งหมดในเว็บ (สำหรับแอดมินดูภาพรวม + กดแก้ไข/ลบได้ทันที)
+function renderAdminProductsList() {
+    const tbody = document.getElementById('adminProductsListBody');
+    const emptyMsg = document.getElementById('adminProductsListEmpty');
+    if (!tbody) return;
+
+    // อัปเดตตัวเลข badge บนแท็บ = จำนวนสินค้าทั้งหมดในเว็บ (ไม่ขึ้นกับคำค้นหา)
+    const countBadge = document.getElementById('adminProductsCountBadge');
+    if (countBadge) countBadge.innerText = String(products.length);
+
+    const searchInput = document.getElementById('adminProductSearchInput');
+    const keyword = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+    const list = products.filter(p => {
+        if (!keyword) return true;
+        return (p.name || '').toLowerCase().includes(keyword) || (p.brand || '').toLowerCase().includes(keyword);
+    });
+
+    if (list.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = list.map(p => `
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
+            <td class="py-2 pr-2">
+                <div class="flex items-center gap-2">
+                    <img src="${p.img || ''}" alt="" class="w-8 h-8 rounded object-cover bg-slate-800 shrink-0"
+                        onerror="this.style.visibility='hidden'">
+                    <div class="min-w-0">
+                        <p class="text-white font-semibold truncate max-w-[160px]">${p.name || '-'}</p>
+                        <p class="text-gray-500 text-[10px] truncate max-w-[160px]">${p.brand || ''}</p>
+                    </div>
+                </div>
+            </td>
+            <td class="py-2 pr-2 text-gray-300">${p.category || '-'}</td>
+            <td class="py-2 pr-2 text-[var(--theme-400)] font-semibold">฿${Number(p.price || 0).toLocaleString()}</td>
+            <td class="py-2 pr-2 text-right whitespace-nowrap">
+                <button onclick="editProduct('${p.id}'); closeAdminSettingsModal();" class="text-gray-400 hover:text-[var(--theme-400)] px-1.5" title="แก้ไข">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="deleteProduct('${p.id}')" class="text-gray-400 hover:text-red-400 px-1.5" title="ลบ">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ==========================================
+// PRESENCE SYSTEM (ระบบเช็คบัญชีที่ออนไลน์อยู่ในเว็ป)
+// ใช้ Firebase Realtime Database (rtdb) เพราะมี .info/connected + onDisconnect()
+// ที่ฝั่งเซิร์ฟเวอร์ Firebase เป็นคนจัดการลบสถานะให้เองอัตโนมัติ ทันทีที่แท็บถูกปิด/เน็ตหลุด/แบตหมดกะทันหัน
+// (แม่นยำกว่าวิธี heartbeat เดิมที่ใช้ Firestore มาก และไม่ต้องคอยเขียนทุก 25 วิให้เปลืองด้วย)
+// ==========================================
+let presenceConnectedRef = null;   // ref ของ .info/connected ที่กำลัง listen อยู่ (ไว้ off ตอน logout)
+let presenceActiveUid = null;      // เก็บ uid ของคนที่กำลัง online ไว้แยกต่างหาก
+// (เพราะตอน logout ตัวแปร currentUser ส่วนกลางจะถูกเซ็ตเป็น null ไปแล้วก่อนเรียก stopPresenceHeartbeat)
+let onlineUsersUnsubscribe = null; // ฟังก์ชันยกเลิกการฟังรายชื่อผู้ใช้ออนไลน์ (สำหรับแอดมิน)
+
+// เริ่มติดตามสถานะออนไลน์หลัง login (เรียกจาก auth.onAuthStateChanged)
+function startPresenceHeartbeat(user, userData) {
+    if (!user || typeof rtdb === 'undefined' || !rtdb) return;
+    stopPresenceHeartbeat(); // กันเปิดซ้ำถ้าเรียกหลายรอบ
+
+    presenceActiveUid = user.uid;
+    const presenceRef = rtdb.ref('presence/' + user.uid);
+    presenceConnectedRef = rtdb.ref('.info/connected');
+
+    presenceConnectedRef.on('value', (snap) => {
+        if (snap.val() !== true) return; // ยังไม่ได้เชื่อมต่อกับ Realtime Database ข้ามไปก่อน
+
+        // ตั้งคำสั่งไว้ล่วงหน้ากับเซิร์ฟเวอร์ Firebase: ถ้าแท็บนี้หลุดการเชื่อมต่อไม่ว่าด้วยสาเหตุใด
+        // (ปิดแท็บ, ปิดเบราว์เซอร์, เน็ตหลุด, แบตหมด) ให้ลบ presence/{uid} ทิ้งอัตโนมัติทันที
+        // โดยไม่ต้องรอให้โค้ดฝั่งเราทำงาน (ซึ่งบางกรณีทำไม่ทันเพราะแท็บถูกปิดไปแล้ว)
+        presenceRef.onDisconnect().remove().then(() => {
+            presenceRef.set({
+                name: (userData && (userData.firstName || userData.email)) || user.email || 'ผู้ใช้',
+                email: (userData && userData.email) || user.email || '',
+                role: (userData && userData.role) || 'user',
+                lastActive: firebase.database.ServerValue.TIMESTAMP
+            });
+        });
+    });
+}
+
+// หยุดติดตาม + ลบสถานะออนไลน์ทันที (เรียกตอน logout)
+function stopPresenceHeartbeat() {
+    if (presenceConnectedRef) {
+        presenceConnectedRef.off();
+        presenceConnectedRef = null;
+    }
+    if (presenceActiveUid && typeof rtdb !== 'undefined' && rtdb) {
+        const presenceRef = rtdb.ref('presence/' + presenceActiveUid);
+        presenceRef.onDisconnect().cancel(); // ยกเลิกคำสั่งลบอัตโนมัติที่ตั้งไว้ (เพราะเราลบเองตอนนี้แล้ว)
+        presenceRef.remove();
+    }
+    presenceActiveUid = null;
+}
+
+// เริ่มฟังรายชื่อบัญชีออนไลน์แบบเรียลไทม์ (เรียกตอนเปิด Admin Settings Modal เท่านั้น เพื่อไม่เปลืองการเชื่อมต่อตลอดเวลา)
+function startOnlineUsersListener() {
+    if (!isCurrentUserAdmin() || typeof rtdb === 'undefined' || !rtdb) return;
+    stopOnlineUsersListener(); // กันซ้อน
+
+    const presenceListRef = rtdb.ref('presence');
+    const handler = (snapshot) => {
+        const data = snapshot.val() || {};
+        const onlineList = Object.keys(data)
+            .map(uid => ({ uid, ...data[uid] }))
+            .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0));
+        renderOnlineUsersList(onlineList);
+    };
+    presenceListRef.on('value', handler, (error) => {
+        console.warn('ดึงรายชื่อผู้ใช้ออนไลน์ไม่สำเร็จ (เช็ค Realtime Database Security Rules ของ path "presence" ด้วย):', error);
+    });
+    onlineUsersUnsubscribe = () => presenceListRef.off('value', handler);
+}
+
+function stopOnlineUsersListener() {
+    if (onlineUsersUnsubscribe) {
+        onlineUsersUnsubscribe();
+        onlineUsersUnsubscribe = null;
+    }
+}
+
+function renderOnlineUsersList(onlineList) {
+    const body = document.getElementById('onlineUsersListBody');
+    const emptyMsg = document.getElementById('onlineUsersEmpty');
+    const badge = document.getElementById('onlineUsersCountBadge');
+    if (!body) return;
+
+    if (badge) {
+        badge.innerText = String(onlineList.length);
+        badge.classList.toggle('hidden', onlineList.length === 0);
+    }
+
+    if (onlineList.length === 0) {
+        body.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+
+    body.innerHTML = onlineList.map(u => `
+        <div class="flex items-center justify-between bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2 h-2 rounded-full bg-green-400 shrink-0" title="ออนไลน์"></span>
+                <div class="min-w-0">
+                    <p class="text-white text-xs font-semibold truncate">${u.name || u.email || 'ผู้ใช้'}</p>
+                    <p class="text-gray-500 text-[10px] truncate">${u.email || ''}</p>
+                </div>
+            </div>
+            ${u.role === 'admin' ? '<span class="text-[10px] bg-[var(--theme-500)]/20 text-[var(--theme-400)] px-2 py-0.5 rounded-full shrink-0">Admin</span>' : ''}
+        </div>
+    `).join('');
+}
 
 // ==========================================
 // ADMIN MODAL & CRUD FUNCTIONS
