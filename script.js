@@ -1184,7 +1184,7 @@ function resetSidebarFilters() {
 
 // พาไปหน้ารายละเอียดสินค้า — เรียกจากการคลิกที่การ์ดสินค้าทุกจุดในเว็บ
 function goToProduct(productId) {
-    window.location.href = `product.html?id=${encodeURIComponent(productId)}`;
+    window.location.href = `Product.html?id=${encodeURIComponent(productId)}`;
 }
 
 // Render หน้ารายละเอียดสินค้าเดี่ยว (ทำงานเฉพาะเมื่อหน้านั้นมี #productDetailContainer เท่านั้น)
