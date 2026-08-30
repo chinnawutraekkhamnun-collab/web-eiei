@@ -739,9 +739,17 @@ function renderAllTypedSections() {
 // ==========================================
 // GAMING GEAR SECTION (+ Sidebar Filter: ชนิดสินค้า / ช่วงราคา / แบรนด์)
 // ==========================================
-function renderGamingGearGrid() {
+
+// จำนวนสินค้าสูงสุดต่อหน้า และหน้าปัจจุบันที่กำลังแสดงอยู่ (รีเซ็ตเป็นหน้า 1 ทุกครั้งที่ค้นหา/กรอง/โหลดใหม่)
+const GAMING_GEAR_PAGE_SIZE = 20;
+let gamingGearCurrentPage = 1;
+
+// page = ระบุเมื่อกดปุ่มเลขหน้าเท่านั้น ถ้าไม่ระบุ (เช่น ตอนค้นหา/กรอง/โหลดสินค้าใหม่) จะรีเซ็ตกลับไปหน้า 1 เสมอ
+function renderGamingGearGrid(page) {
     const grid = document.getElementById('gamingGearGrid');
     if (!grid) return;
+
+    gamingGearCurrentPage = (typeof page === 'number') ? page : 1;
 
     const pageCategory = document.body.getAttribute('data-category');
     let items = products;
@@ -790,10 +798,22 @@ function renderGamingGearGrid() {
 
     if (items.length === 0) {
         grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">ไม่พบสินค้าตามตัวกรองที่เลือก</div>`;
+        renderGamingGearPagination(0, 1);
         return;
     }
 
-    grid.innerHTML = items.map(p => {
+    // เรียงสินค้าจากราคาถูกสุดไปแพงสุดเสมอ
+    items = items.slice().sort((a, b) => (a.price || 0) - (b.price || 0));
+
+    // แบ่งหน้า: หน้าละ GAMING_GEAR_PAGE_SIZE ชิ้น
+    const totalPages = Math.max(1, Math.ceil(items.length / GAMING_GEAR_PAGE_SIZE));
+    if (gamingGearCurrentPage > totalPages) gamingGearCurrentPage = totalPages;
+    if (gamingGearCurrentPage < 1) gamingGearCurrentPage = 1;
+
+    const startIdx = (gamingGearCurrentPage - 1) * GAMING_GEAR_PAGE_SIZE;
+    const pageItems = items.slice(startIdx, startIdx + GAMING_GEAR_PAGE_SIZE);
+
+    grid.innerHTML = pageItems.map(p => {
         const hasDiscount = p.oldPrice > p.price;
         const discountAmount = hasDiscount ? (p.oldPrice - p.price) : 0;
         const warranty = p.warranty || '1Y';
@@ -852,6 +872,53 @@ function renderGamingGearGrid() {
         </div>
     `;
     }).join('');
+
+    renderGamingGearPagination(items.length, totalPages);
+}
+
+// สร้างปุ่มเลขหน้า (แสดงเฉพาะตอนสินค้าเกิน GAMING_GEAR_PAGE_SIZE ชิ้นเท่านั้น)
+function renderGamingGearPagination(totalItems, totalPages) {
+    const container = document.getElementById('gamingGearPagination');
+    if (!container) return;
+
+    if (totalItems <= GAMING_GEAR_PAGE_SIZE || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let buttonsHtml = '';
+
+    // ปุ่มย้อนกลับ
+    buttonsHtml += `
+        <button onclick="goToGamingGearPage(${gamingGearCurrentPage - 1})" ${gamingGearCurrentPage === 1 ? 'disabled' : ''}
+            class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center transition ${gamingGearCurrentPage === 1 ? 'bg-slate-900 text-gray-600 cursor-not-allowed' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        const isActive = i === gamingGearCurrentPage;
+        buttonsHtml += `
+        <button onclick="goToGamingGearPage(${i})"
+            class="w-9 h-9 rounded-lg text-sm font-bold transition ${isActive ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            ${i}
+        </button>`;
+    }
+
+    // ปุ่มถัดไป
+    buttonsHtml += `
+        <button onclick="goToGamingGearPage(${gamingGearCurrentPage + 1})" ${gamingGearCurrentPage === totalPages ? 'disabled' : ''}
+            class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center transition ${gamingGearCurrentPage === totalPages ? 'bg-slate-900 text-gray-600 cursor-not-allowed' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>`;
+
+    container.innerHTML = buttonsHtml;
+}
+
+// ไปยังหน้าที่ต้องการ แล้วเลื่อนขึ้นไปด้านบนของกริดสินค้าให้เห็นสินค้าใหม่ทันที
+function goToGamingGearPage(page) {
+    renderGamingGearGrid(page);
+    const grid = document.getElementById('gamingGearGrid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // สร้างรายชื่อ Brand แบบไดนามิกจากสินค้าจริงในหมวดหมู่นี้ และตั้งค่าช่วงราคาต่ำสุด-สูงสุดให้ตรงกับสินค้าจริง
