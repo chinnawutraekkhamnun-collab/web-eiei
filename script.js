@@ -16,8 +16,9 @@ let products = [];
 const PRODUCTS_CACHE_KEY = 'compung_products_cache_v1';
 const PRODUCTS_CACHE_TTL_MS = 2 * 60 * 1000; // ช่วงผ่อนผัน 2 นาที: ในช่วงนี้ใช้แคชเดิมได้เลยโดยไม่เช็คอะไรเลย
 // พ้นช่วงนี้แล้วค่อยเช็คเวอร์ชัน (1 read) ก่อนตัดสินใจว่าต้องดึงทั้ง collection ใหม่หรือไม่
-// หมายเหตุ: ตอนแอดมินเพิ่ม/แก้ไข/ลบสินค้า ระบบเรียก fetchProductsFromFirebase(true) เพื่อบังคับดึงสด
-// และเขียนทับแคชนี้อยู่แล้ว ลูกค้าจะเห็นข้อมูลใหม่ทันทีโดยไม่ต้องรอ TTL หมดอายุ
+// หมายเหตุ: fetchProductsFromFirebase(true) ยังมีไว้ใช้เผื่อจำเป็น (เช่น debug/บังคับ sync)
+// แต่ตอนแอดมินเพิ่ม/แก้ไข/ลบสินค้าปกติ ไม่เรียกฟังก์ชันนี้แล้ว เพราะเสีย read เท่าจำนวนสินค้าทั้งร้านทุกครั้ง
+// เปลี่ยนไปอัปเดต products array ในเครื่อง + เขียนแคชทับตรง ๆ แทน (ดูฟังก์ชัน saveProduct / deleteProduct)
 
 // อ่านแคชสินค้าจาก localStorage — คืนค่า null ถ้าไม่มีแคชหรือข้อมูลเสีย (ไม่เช็ค TTL ในนี้แล้ว)
 function readProductsCache() {
@@ -54,6 +55,66 @@ function writeProductsCache(productList, version) {
 function clearProductsCache() {
     try {
         localStorage.removeItem(PRODUCTS_CACHE_KEY);
+    } catch (error) {
+        // เพิกเฉยได้
+    }
+}
+
+// ==========================================
+// USER DATA CACHE (ลด Firestore Reads จาก users/{uid})
+// เดิม: auth.onAuthStateChanged ยิง db.collection('users').doc(uid).get() ใหม่ทุกครั้งที่โหลดหน้า
+// (เว็บนี้เป็น multi-page ไม่ใช่ SPA จึง onAuthStateChanged ทำงานทุก page load)
+// ทำให้ user ที่ login อยู่เสีย 1 read ต่อหน้าที่เปิด แม้ข้อมูล (role/ชื่อ/cart) จะไม่ได้เปลี่ยนเลยก็ตาม
+// แก้โดยแคชไว้ใน localStorage แบบเดียวกับ products (TTL สั้น ๆ) — พ้น TTL ค่อยดึงใหม่จริง
+// ==========================================
+const USER_CACHE_KEY = 'compung_user_cache_v1';
+const USER_CACHE_TTL_MS = 2 * 60 * 1000; // 2 นาที เหมือนกับ products cache
+
+// อ่านแคชข้อมูล user จาก localStorage — คืนค่า null ถ้าไม่มี/ข้อมูลเสีย/คนละ uid
+function readUserCache(uid) {
+    try {
+        const raw = localStorage.getItem(USER_CACHE_KEY);
+        if (!raw) return null;
+
+        const cached = JSON.parse(raw);
+        if (!cached || cached.uid !== uid || !cached.data) return null;
+
+        return cached; // { uid, timestamp, data }
+    } catch (error) {
+        console.warn('อ่านแคชข้อมูลผู้ใช้ไม่สำเร็จ:', error);
+        return null;
+    }
+}
+
+// บันทึกข้อมูล user ล่าสุดลง localStorage พร้อม timestamp
+function writeUserCache(uid, data) {
+    try {
+        localStorage.setItem(USER_CACHE_KEY, JSON.stringify({
+            uid: uid,
+            timestamp: Date.now(),
+            data: data
+        }));
+    } catch (error) {
+        console.warn('บันทึกแคชข้อมูลผู้ใช้ไม่สำเร็จ:', error);
+    }
+}
+
+// อัปเดตเฉพาะบาง field ของแคช user ที่มีอยู่ (เช่น cart) โดยไม่ต้อง fetch ใหม่
+// ใช้หลังจากเขียนค่าลง Firestore สำเร็จแล้ว เพื่อไม่ให้แคชค้างข้อมูลเก่าจนกว่าจะหมด TTL
+function patchUserCache(uid, partialData) {
+    try {
+        const cached = readUserCache(uid);
+        const merged = Object.assign({}, cached && cached.data, partialData);
+        writeUserCache(uid, merged);
+    } catch (error) {
+        console.warn('อัปเดตแคชข้อมูลผู้ใช้ไม่สำเร็จ:', error);
+    }
+}
+
+// ล้างแคชข้อมูล user ทิ้ง (เรียกตอน logout เพื่อไม่ให้บัญชีถัดไปที่ login เห็นข้อมูลค้าง)
+function clearUserCache() {
+    try {
+        localStorage.removeItem(USER_CACHE_KEY);
     } catch (error) {
         // เพิกเฉยได้
     }
@@ -683,6 +744,10 @@ let cart = [];                // ตะกร้าสินค้าปัจ�
 // ระบบประวัติการซื้อสินค้า (Order History)
 // เก็บจริงใน Firestore ที่ users/{uid}/orders — โหลดผ่าน loadOrderHistoryFromFirestore()
 let orderHistory = [];
+// เดิม onAuthStateChanged ดึงประวัติออเดอร์ "ทั้งหมด" ของ user ทุกครั้งที่โหลดหน้า แม้หน้านั้นไม่ได้แสดงประวัติเลย
+// (ยิ่ง user มีออเดอร์สะสมเยอะ ยิ่งเสีย read เยอะ และเสียซ้ำทุกหน้าที่เปิด)
+// ใช้ flag นี้ให้โหลดแบบ lazy: ดึงจริงก็ต่อเมื่อ user เปิดแท็บ "ประวัติการสั่งซื้อ" ครั้งแรกในเซสชันนี้เท่านั้น
+let orderHistoryLoaded = false;
 let currentCartTab = 'cart';
 let currentCategory = 'all';
 let currentBrand = 'all';
@@ -1317,6 +1382,8 @@ async function syncCartToFirestore() {
     if (!currentUser) return;
     try {
         await db.collection('users').doc(currentUser.uid).update({ cart: cart });
+        // อัปเดตแคช user ในเครื่องด้วย ไม่งั้นถ้ารีเฟรชหน้าในช่วง TTL cache จะเห็นตะกร้าเก่าค้างอยู่
+        patchUserCache(currentUser.uid, { cart: cart });
     } catch (error) {
         console.error('บันทึกตะกร้าสินค้าไปยัง Firestore ไม่สำเร็จ:', error);
     }
@@ -1789,7 +1856,9 @@ async function finalizeCheckoutOrder() {
 
         cart = [];
         await syncCartToFirestore();
+        // เพิ่งสร้างออเดอร์ใหม่จริง ๆ จึงดึงประวัติสดจาก Firestore ตรงนี้ (คุ้มที่จะเสีย read เพื่อความถูกต้อง)
         await loadOrderHistoryFromFirestore();
+        orderHistoryLoaded = true;
 
         updateCartCount();
         renderCartItems();
@@ -1860,7 +1929,18 @@ function switchCartTab(tab) {
         cartItemsContainer.classList.add('hidden');
         orderHistoryContainer.classList.remove('hidden');
         if (cartFooter) cartFooter.classList.add('hidden');
-        renderOrderHistory();
+
+        // ดึงประวัติออเดอร์จาก Firestore เฉพาะครั้งแรกที่เปิดแท็บนี้ในเซสชันนี้เท่านั้น (lazy load)
+        // ครั้งถัดไปที่สลับกลับมาแท็บนี้ ใช้ orderHistory ที่โหลดไว้แล้วในหน่วยความจำ ไม่ยิง Firestore ซ้ำ
+        if (!orderHistoryLoaded) {
+            orderHistoryContainer.innerHTML = `<p class="text-center text-gray-400 text-sm py-8"><i class="fa-solid fa-spinner fa-spin"></i></p>`;
+            loadOrderHistoryFromFirestore().then(() => {
+                orderHistoryLoaded = true;
+                renderOrderHistory();
+            });
+        } else {
+            renderOrderHistory();
+        }
     } else {
         currentCartTab = 'cart';
         cartTabBtn.className = activeClass;
@@ -2112,6 +2192,8 @@ async function saveProfile(e) {
         // อัปเดตข้อมูลในเครื่องให้ตรงกับที่บันทึกไป โดยไม่กระทบ field อื่น เช่น role และ cart
         currentUserData = { ...currentUserData, ...updatedData };
         updateUserUI(currentUser, currentUserData);
+        // อัปเดตแคชในเครื่องด้วย ไม่งั้นรีเฟรชหน้าในช่วง TTL cache จะเห็นชื่อ/ที่อยู่เก่าค้างอยู่
+        patchUserCache(currentUser.uid, updatedData);
 
         alert(currentLang === 'th' ? 'บันทึกข้อมูลเรียบร้อยแล้ว' : 'Profile updated successfully.');
         closeProfileModal();
@@ -2145,19 +2227,31 @@ function updateUserUI(user, userData) {
 auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     if (user) {
-        try {
-            const doc = await db.collection('users').doc(user.uid).get();
-            currentUserData = doc.exists ? doc.data() : null;
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
-            currentUserData = null;
+        // เดิม: get() ใหม่ทุกครั้งที่โหลดหน้า (เว็บนี้เป็น multi-page ไม่ใช่ SPA)
+        // ตอนนี้: เช็คแคชในเครื่องก่อน ถ้ายังอยู่ในช่วง TTL และเป็น uid เดียวกัน ใช้แคชได้เลย ไม่เสีย read
+        const cachedUser = readUserCache(user.uid);
+        const withinGracePeriod = cachedUser && cachedUser.timestamp && (Date.now() - cachedUser.timestamp < USER_CACHE_TTL_MS);
+
+        if (withinGracePeriod) {
+            currentUserData = cachedUser.data;
+        } else {
+            try {
+                const doc = await db.collection('users').doc(user.uid).get();
+                currentUserData = doc.exists ? doc.data() : null;
+                writeUserCache(user.uid, currentUserData);
+            } catch (error) {
+                console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
+                currentUserData = null;
+            }
         }
 
         // โหลดตะกร้าสินค้าที่เคยบันทึกไว้ของบัญชีนี้กลับมา
         cart = (currentUserData && Array.isArray(currentUserData.cart)) ? currentUserData.cart : [];
 
-        // โหลดประวัติการสั่งซื้อของบัญชีนี้
-        await loadOrderHistoryFromFirestore();
+        // ไม่ดึงประวัติการสั่งซื้อตรงนี้แล้ว (ดู loadOrderHistoryFromFirestore แบบ lazy ใน switchCartTab)
+        // เพราะเดิมดึงประวัติทั้งหมดทุกหน้าที่เปิด ทั้งที่หลายหน้าไม่ได้แสดงประวัติเลย
+        orderHistory = [];
+        orderHistoryLoaded = false;
 
         // เริ่มส่งสถานะ "ออนไลน์อยู่" ให้แอดมินเห็นได้ในหน้าตั้งค่า
         if (typeof startPresenceHeartbeat === 'function') startPresenceHeartbeat(currentUser, currentUserData);
@@ -2165,6 +2259,8 @@ auth.onAuthStateChanged(async (user) => {
         currentUserData = null;
         cart = [];
         orderHistory = [];
+        orderHistoryLoaded = false;
+        clearUserCache();
 
         // ออกจากระบบแล้ว หยุดส่งสถานะออนไลน์
         if (typeof stopPresenceHeartbeat === 'function') stopPresenceHeartbeat();
@@ -2690,9 +2786,18 @@ async function saveProduct(e) {
         alert("บันทึกข้อมูลสินค้าสำเร็จ!");
         if (typeof closeAdminModal === 'function') closeAdminModal();
 
-        // forceRefresh = true: ดึงข้อมูลสดจาก Firestore ทันที ไม่ใช้แคชเก่า
-        // เพื่อให้แอดมินเห็นสินค้าที่เพิ่ง เพิ่ม/แก้ไข ทันที (แคชนี้จะถูกบันทึกทับให้ทุกหน้าใช้ต่อด้วย)
-        await fetchProductsFromFirebase(true);
+        // อัปเดตแค่สินค้าชิ้นนี้ในหน่วยความจำ + แคช โดยไม่ต้องดึงสินค้าทั้ง collection ใหม่จาก Firestore
+        // (เดิมใช้ fetchProductsFromFirebase(true) ซึ่งเสีย 1 read ต่อสินค้า 1 ชิ้นในร้าน ทุกครั้งที่กดบันทึก
+        // พอแอดมินหลายคนทยอยเพิ่มสินค้าทีละมาก ๆ ทำให้ read พุ่งสูงมาก เพราะแต่ละ "บันทึก" ดึงสินค้าทั้งร้านใหม่หมด)
+        const savedProduct = { ...productData, id: docRef.id, firestoreId: docRef.id };
+        const existingIndex = products.findIndex(p => String(p.id) === String(docRef.id));
+        if (existingIndex >= 0) {
+            products[existingIndex] = savedProduct; // แก้ไขสินค้าเดิม
+        } else {
+            products.push(savedProduct); // เพิ่มสินค้าใหม่
+        }
+        writeProductsCache(products, String(Date.now())); // เก็บแคชใหม่ไว้ให้ตัวเองใช้ต่อทันที ไม่ต้องรอ meta
+        renderAllProductViews();
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการบันทึกสินค้า:", error);
         alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
@@ -2751,8 +2856,10 @@ async function deleteProduct(id) {
 
             alert("ลบสินค้าเรียบร้อยแล้ว!");
 
-            // forceRefresh = true: ดึงข้อมูลสดจาก Firestore ทันที ไม่ใช้แคชเก่า
-            await fetchProductsFromFirebase(true);
+            // เอาสินค้าชิ้นนี้ออกจากหน่วยความจำ + แคชในเครื่องเลย โดยไม่ต้องดึงสินค้าทั้ง collection ใหม่
+            products = products.filter(p => String(p.id) !== String(id));
+            writeProductsCache(products, String(Date.now()));
+            renderAllProductViews();
         } catch (error) {
             console.error("เกิดข้อผิดพลาดในการลบสินค้า:", error);
             alert("ไม่สามารถลบสินค้าได้ กรุณาลองใหม่อีกครั้ง");
@@ -3003,3 +3110,7 @@ function initSnowfall() {
 document.addEventListener('DOMContentLoaded', () => {
     initSnowfall();
 });
+
+firebase.initializeApp(firebaseConfig);
+firebase.firestore().settings({}); // ถ้ามีอยู่แล้วข้ามได้
+firebase.firestore.setLogLevel('debug');
