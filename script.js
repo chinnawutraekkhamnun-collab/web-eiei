@@ -878,6 +878,42 @@ function renderAllTypedSections() {
 const GAMING_GEAR_PAGE_SIZE = 20;
 let gamingGearCurrentPage = 1;
 
+// ==========================================
+// GLOBAL SEARCH HELPERS (ค้นหาทั้งร้าน ไม่จำกัดหมวดหมู่ของหน้าปัจจุบัน)
+// แก้ปัญหา: เดิมพิมพ์ค้นหาในหน้าหมวดหมู่ (เช่น m.html = หน้าเมาส์) จะกรองเจอแค่ในหมวดเมาส์เท่านั้น
+// ทั้งที่ควรค้นทั้งร้าน เช่น พิมพ์ "เมาส์ razer" ควรเจอทั้งเมาส์และคีย์บอร์ดแบรนด์ Razer แสดงรวมกันทันที
+// ==========================================
+
+// ชื่อหมวดหมู่ภาษาไทย (ใช้เป็น fallback เสมอ ไม่ว่าเว็บจะตั้งภาษาอะไรอยู่ก็ตาม เพื่อให้พิมพ์ค้นหาชื่อหมวดหมู่ไทยเจอ)
+const CATEGORY_LABELS_TH = {
+    mouse: 'เมาส์', keyboard: 'คีย์บอร์ด', headset: 'หูฟัง', speaker: 'ลำโพง',
+    microphone: 'ไมโครโฟน', notebook: 'โน้ตบุ๊ก', chair: 'เก้าอี้', desk: 'โต๊ะ',
+    mousepad: 'แผ่นรองเมาส์', monitor: 'จอภาพ', cooling: 'ระบบระบายความร้อน',
+    streaming: 'อุปกรณ์สตรีมมิ่ง', vr: 'อุปกรณ์ VR', racing: 'อุปกรณ์แข่งรถ',
+    controller: 'จอยเกม', camera: 'กล้อง', flashdrive: 'แฟลชไดรฟ์'
+};
+
+// แปลง category key (เช่น "mouse") เป็นชื่อหมวดหมู่ตามภาษาที่เว็บกำลังแสดงอยู่ (ถ้ามี) — ใช้ตอนแสดงผลและตอนค้นหา
+function getCategoryLabel(categoryKey) {
+    if (!categoryKey) return '';
+    try {
+        const i18nKey = 'cat' + categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1);
+        const t = typeof translations !== 'undefined' && translations[currentLang];
+        if (t && t[i18nKey]) return t[i18nKey];
+    } catch (e) { /* เพิกเฉยได้ ใช้ fallback ด้านล่างแทน */ }
+    return CATEGORY_LABELS_TH[categoryKey] || categoryKey;
+}
+
+// เช็คว่าสินค้าชิ้นนี้ตรงกับคำค้นหาหรือไม่ — ค้นจากชื่อ/แบรนด์/สเปก/หมวดหมู่(key)/ชื่อหมวดหมู่ที่แปลแล้ว/ชื่อหมวดหมู่ไทย
+// รองรับพิมพ์หลายคำพร้อมกัน (คั่นด้วยเว้นวรรค) เช่น "เมาส์ razer" -> ต้องเจอ "ครบทุกคำ" ในสินค้าชิ้นเดียวกัน (AND)
+function matchesGlobalSearch(product, searchWords) {
+    const haystack = [
+        product.name, product.brand, product.specs, product.category,
+        getCategoryLabel(product.category), CATEGORY_LABELS_TH[product.category]
+    ].join(' ').toLowerCase();
+    return searchWords.every(w => haystack.includes(w));
+}
+
 // page = ระบุเมื่อกดปุ่มเลขหน้าเท่านั้น ถ้าไม่ระบุ (เช่น ตอนค้นหา/กรอง/โหลดสินค้าใหม่) จะรีเซ็ตกลับไปหน้า 1 เสมอ
 function renderGamingGearGrid(page) {
     const grid = document.getElementById('gamingGearGrid');
@@ -886,22 +922,24 @@ function renderGamingGearGrid(page) {
     gamingGearCurrentPage = (typeof page === 'number') ? page : 1;
 
     const pageCategory = document.body.getAttribute('data-category');
-    let items = products;
-
-    if (pageCategory && pageCategory !== 'all') {
-        items = products.filter(p => p.category === pageCategory);
-    }
 
     // --- ตัวกรอง Sidebar (จะมีผลเฉพาะหน้าที่มี Sidebar Filter เท่านั้น) ---
 
     // 0) กรองตามคำค้นหา (ช่องค้นหาด้านบนสุดของหน้า)
+    // ถ้ามีการพิมพ์ค้นหา -> ค้นหา "ทั้งร้าน" ทันที ไม่จำกัดอยู่แค่หมวดหมู่ของหน้าปัจจุบัน (pageCategory)
+    // เพื่อให้พิมพ์ "เมาส์ razer" ในหน้าไหนก็ตาม เจอทั้งเมาส์และคีย์บอร์ด (หรือสินค้าอื่น) แบรนด์ Razer แสดงรวมกันมาทันที
     const searchInputEl = document.getElementById('searchInput');
-    if (searchInputEl && searchInputEl.value.trim() !== '') {
-        const searchTerm = searchInputEl.value.toLowerCase();
-        items = items.filter(p =>
-            (p.name || '').toLowerCase().includes(searchTerm) ||
-            (p.specs || '').toLowerCase().includes(searchTerm)
-        );
+    const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
+
+    let items;
+    if (searchTerm) {
+        const searchWords = searchTerm.split(/\s+/).filter(Boolean);
+        items = products.filter(p => matchesGlobalSearch(p, searchWords));
+    } else {
+        // ไม่มีคำค้นหา -> พฤติกรรมเดิม จำกัดเฉพาะหมวดหมู่ของหน้าปัจจุบัน (ถ้าหน้านี้ผูกหมวดหมู่ไว้)
+        items = (pageCategory && pageCategory !== 'all')
+            ? products.filter(p => p.category === pageCategory)
+            : products;
     }
 
     // 1) กรองตามชนิดสินค้า (สินค้าทั่วไป / ยอดฮิต / Flash Sale) — ไม่ติ๊กเลย = แสดงทุกชนิด
@@ -1348,16 +1386,50 @@ function filterProducts() {
         return;
     }
 
+    const productGrid = document.getElementById('productGrid');
+    if (!productGrid) return; // หน้านี้ไม่มีส่วนแสดงผลสินค้าแบบนี้ (เช่น หน้ารายละเอียดสินค้า) ไม่ต้องทำอะไรต่อ
+
     const searchInput = document.getElementById('searchInput');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    let filtered = products.filter(p => {
-        const matchesCategory = currentCategory === 'all' || p.category === currentCategory;
-        const matchesBrand = currentBrand === 'all' || p.brand.toLowerCase() === currentBrand.toLowerCase();
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm) || p.specs.toLowerCase().includes(searchTerm);
+    const productSection = document.getElementById('product-section');
+    const sectionTitleEl = document.getElementById('productSectionTitle');
 
-        return matchesCategory && matchesBrand && matchesSearch;
-    });
+    let filtered;
+    if (searchTerm) {
+        // มีคำค้นหา -> ค้นทั้งร้านทันที ไม่จำกัดหมวดหมู่/แบรนด์ที่เลือกไว้อยู่ก่อน (ให้ผลลัพธ์ตรงคำค้นหารวมกันมาทั้งหมด)
+        const searchWords = searchTerm.split(/\s+/).filter(Boolean);
+        filtered = products.filter(p => matchesGlobalSearch(p, searchWords));
+
+        // สลับจากแถบเลื่อนแนวนอน (สินค้าแนะนำ) เป็น grid เต็มพื้นที่ เพื่อให้เห็นผลลัพธ์ค้นหาทั้งหมดชัดเจน ไม่ต้องเลื่อนซ้าย-ขวาเอง
+        productGrid.classList.remove('flex', 'overflow-x-auto', 'snap-x', 'no-scrollbar');
+        productGrid.classList.add('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5', 'gap-3', 'sm:gap-5');
+
+        // เปลี่ยนหัวข้อให้รู้ชัดว่านี่คือผลการค้นหา ไม่ใช่ "รายการสินค้าแนะนำ" เหมือนเดิม
+        if (sectionTitleEl) {
+            sectionTitleEl.textContent = `ผลการค้นหา "${searchInput.value.trim()}" (${filtered.length} รายการ)`;
+        }
+
+        // เลื่อนหน้าไปยังส่วนผลการค้นหาให้อัตโนมัติทันทีที่พิมพ์ ผู้ใช้จะได้เห็นว่าเปลี่ยนแล้วจริง ๆ โดยไม่ต้องเลื่อนหาเอง
+        if (productSection) {
+            productSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } else {
+        filtered = products.filter(p => {
+            const matchesCategory = currentCategory === 'all' || p.category === currentCategory;
+            const matchesBrand = currentBrand === 'all' || p.brand.toLowerCase() === currentBrand.toLowerCase();
+            return matchesCategory && matchesBrand;
+        });
+
+        // เลิกค้นหาแล้ว -> คืนสไตล์แถบเลื่อนแนวนอนและหัวข้อ "รายการสินค้าแนะนำ" กลับมาเหมือนเดิม
+        productGrid.classList.remove('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5');
+        productGrid.classList.add('flex', 'overflow-x-auto', 'snap-x', 'no-scrollbar');
+
+        if (sectionTitleEl) {
+            const t = typeof translations !== 'undefined' && translations[currentLang];
+            sectionTitleEl.textContent = (t && t.recommendedProducts) ? t.recommendedProducts : 'รายการสินค้าแนะนำ';
+        }
+    }
 
     renderProducts(filtered);
 }
@@ -2255,6 +2327,25 @@ auth.onAuthStateChanged(async (user) => {
             }
         }
 
+        // ตรวจสอบว่าบัญชีนี้ถูกแอดมินระงับไว้หรือไม่ ถ้าใช่ให้บังคับออกจากระบบทันที
+        if (currentUserData && currentUserData.suspended === true) {
+            const suspendedUid = user.uid;
+            currentUser = null;
+            currentUserData = null;
+            cart = [];
+            orderHistory = [];
+            orderHistoryLoaded = false;
+            clearUserCache();
+            if (typeof stopPresenceHeartbeat === 'function') stopPresenceHeartbeat();
+            if (typeof stopAdminUsersListener === 'function') stopAdminUsersListener();
+            auth.signOut(); // ไม่ต้อง await เพราะ state ในเครื่องถูกเคลียร์เรียบร้อยแล้วด้านบน
+            alert(currentLang === 'th'
+                ? 'บัญชีนี้ถูกระงับการใช้งานโดยผู้ดูแลระบบ กรุณาติดต่อผู้ดูแลระบบหากคิดว่าเป็นความผิดพลาด'
+                : 'This account has been suspended by an administrator. Please contact the site admin if you believe this is a mistake.');
+            updateUserUI(null, null);
+            return;
+        }
+
         // โหลดตะกร้าสินค้าที่เคยบันทึกไว้ของบัญชีนี้กลับมา
         cart = (currentUserData && Array.isArray(currentUserData.cart)) ? currentUserData.cart : [];
 
@@ -2265,6 +2356,11 @@ auth.onAuthStateChanged(async (user) => {
 
         // เริ่มส่งสถานะ "ออนไลน์อยู่" ให้แอดมินเห็นได้ในหน้าตั้งค่า
         if (typeof startPresenceHeartbeat === 'function') startPresenceHeartbeat(currentUser, currentUserData);
+
+        // ถ้าเป็นแอดมิน เริ่มติดตามรายชื่อผู้สมัครทั้งหมด + แจ้งเตือนผู้สมัครใหม่แบบเรียลไทม์
+        if (isCurrentUserAdmin() && typeof startAdminUsersListener === 'function') {
+            startAdminUsersListener();
+        }
     } else {
         currentUserData = null;
         cart = [];
@@ -2272,8 +2368,9 @@ auth.onAuthStateChanged(async (user) => {
         orderHistoryLoaded = false;
         clearUserCache();
 
-        // ออกจากระบบแล้ว หยุดส่งสถานะออนไลน์
+        // ออกจากระบบแล้ว หยุดส่งสถานะออนไลน์ + หยุดติดตามรายชื่อผู้สมัคร
         if (typeof stopPresenceHeartbeat === 'function') stopPresenceHeartbeat();
+        if (typeof stopAdminUsersListener === 'function') stopAdminUsersListener();
     }
 
     updateUserUI(currentUser, currentUserData);
@@ -2498,24 +2595,6 @@ function applyThemeColor(colorKey, persist = true) {
     });
 }
 
-// สร้างวงกลมเลือกสีในแท็บ "ธีมสี" ของ Admin Settings Modal
-function renderThemeColorSwatches() {
-    const container = document.getElementById('themeColorSwatches');
-    if (!container) return;
-
-    const currentColor = (() => {
-        try { return localStorage.getItem(THEME_COLOR_KEY) || 'cyan'; } catch (e) { return 'cyan'; }
-    })();
-
-    container.innerHTML = Object.keys(THEME_COLOR_PALETTE).map(key => {
-        const c = THEME_COLOR_PALETTE[key];
-        const isActive = key === currentColor ? 'active' : '';
-        return `<button type="button" class="theme-swatch-btn ${isActive}" data-color-key="${key}"
-                    style="background:${c[500]};" title="${c.label}"
-                    onclick="applyThemeColor('${key}')"></button>`;
-    }).join('');
-}
-
 // เรียกตอนโหลดหน้าเว็บทุกครั้ง เพื่อให้สีธีมที่แอดมินเคยเลือกไว้คงอยู่ (script.js โหลดหลัง inline script ใน <head> ไปแล้ว
 // ฉะนั้น :root ถูกตั้งค่าล่วงหน้าไปแล้วรอบนึง อันนี้แค่ sync ให้ตรงกันอีกรอบเผื่อกรณี localStorage เปลี่ยนระหว่างทาง)
 function initThemeColor() {
@@ -2538,8 +2617,8 @@ function openAdminSettingsModal() {
 
     modal.classList.remove('hidden');
     switchAdminSettingsTab('products');
-    renderThemeColorSwatches();
     startOnlineUsersListener();
+    if (typeof renderAdminUsersList === 'function') renderAdminUsersList();
 }
 
 function closeAdminSettingsModal() {
@@ -2549,7 +2628,7 @@ function closeAdminSettingsModal() {
 }
 
 function switchAdminSettingsTab(tabName) {
-    ['products', 'theme', 'online'].forEach(name => {
+    ['products', 'users', 'online'].forEach(name => {
         const panel = document.getElementById(`adminSettingsTab-${name}`);
         const btn = document.getElementById(`adminTabBtn-${name}`);
         if (panel) panel.classList.toggle('hidden', name !== tabName);
@@ -2557,6 +2636,11 @@ function switchAdminSettingsTab(tabName) {
     });
 
     if (tabName === 'products') renderAdminProductsList();
+    if (tabName === 'users') {
+        renderAdminUsersList();
+        // แอดมินเปิดดูแท็บนี้แล้ว = ถือว่ารับทราบการแจ้งเตือนผู้สมัครใหม่แล้ว เคลียร์ badge ทิ้ง
+        clearNewUserNotifications();
+    }
 }
 
 // เรนเดอร์ตารางรายการสินค้าทั้งหมดในเว็บ (สำหรับแอดมินดูภาพรวม + กดแก้ไข/ลบได้ทันที)
@@ -2717,6 +2801,258 @@ function renderOnlineUsersList(onlineList) {
             ${u.role === 'admin' ? '<span class="text-[10px] bg-[var(--theme-500)]/20 text-[var(--theme-400)] px-2 py-0.5 rounded-full shrink-0">Admin</span>' : ''}
         </div>
     `).join('');
+}
+
+// ==========================================
+// ACCOUNTS MANAGEMENT SYSTEM (รายชื่อผู้สมัครทั้งหมด + ระงับ/แก้ไข/ดูรายละเอียดบัญชี)
+// + แจ้งเตือนแอดมินแบบเรียลไทม์เมื่อมีผู้สมัครสมาชิกใหม่ล่าสุด
+// ==========================================
+const NEW_USER_NOTIFY_KEY = 'compung_new_user_notify_count';
+
+let allUsersList = [];             // แคชรายชื่อผู้ใช้ทั้งหมดในเครื่อง (sync จาก Firestore แบบเรียลไทม์)
+let adminUsersListenerUnsub = null;
+let isInitialUsersSnapshot = true; // กันไม่ให้ตอนโหลดรอบแรกถูกนับเป็น "ผู้สมัครใหม่" ทั้งหมด
+
+// เริ่มติดตามรายชื่อผู้สมัครสมาชิกทั้งหมดแบบเรียลไทม์ (เรียกทันทีที่ตรวจพบว่า login เป็น admin
+// ไม่ใช่แค่ตอนเปิด modal เพื่อให้แจ้งเตือนผู้สมัครใหม่ได้แม้ modal จะปิดอยู่)
+function startAdminUsersListener() {
+    if (!isCurrentUserAdmin() || typeof db === 'undefined' || !db) return;
+    stopAdminUsersListener(); // กันซ้อน
+    isInitialUsersSnapshot = true;
+
+    adminUsersListenerUnsub = db.collection('users').orderBy('createdAt', 'desc')
+        .onSnapshot((snapshot) => {
+            allUsersList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+
+            // ข้ามการแจ้งเตือนสำหรับ snapshot ก้อนแรก (ข้อมูลเดิมที่มีอยู่แล้วในระบบ)
+            // แจ้งเตือนเฉพาะรายการที่ถูกเพิ่มเข้ามาใหม่จริงๆ หลังจากนั้น
+            if (!isInitialUsersSnapshot) {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        notifyNewUserRegistration({ uid: change.doc.id, ...change.doc.data() });
+                    }
+                });
+            }
+            isInitialUsersSnapshot = false;
+
+            renderAdminUsersList();
+            updateNewUserNotifyBadge();
+        }, (error) => {
+            console.warn('ดึงรายชื่อผู้สมัครทั้งหมดไม่สำเร็จ (เช็ค Firestore Security Rules ของ collection "users"):', error);
+        });
+}
+
+function stopAdminUsersListener() {
+    if (adminUsersListenerUnsub) {
+        adminUsersListenerUnsub();
+        adminUsersListenerUnsub = null;
+    }
+}
+
+// แจ้งเตือนแอดมินด้วย toast + เพิ่มตัวเลข badge ค้างไว้จนกว่าจะเปิดดูแท็บ "ผู้สมัครทั้งหมด"
+function notifyNewUserRegistration(u) {
+    const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || 'ผู้ใช้ใหม่';
+
+    if (typeof showPaymentToast === 'function') {
+        showPaymentToast(`🔔 มีผู้สมัครสมาชิกใหม่: ${name}`, 'success');
+    }
+
+    let count = 0;
+    try { count = parseInt(localStorage.getItem(NEW_USER_NOTIFY_KEY) || '0', 10) || 0; } catch (e) { /* localStorage ปิดอยู่ */ }
+    count += 1;
+    try { localStorage.setItem(NEW_USER_NOTIFY_KEY, String(count)); } catch (e) { /* ข้ามได้ */ }
+    updateNewUserNotifyBadge();
+}
+
+// อัปเดตจุดแดง/ตัวเลขแจ้งเตือนบนปุ่ม "ตั้งค่า (Admin)" (มีได้หลายจุดในหน้าเว็บ เช่น desktop/mobile)
+function updateNewUserNotifyBadge() {
+    let count = 0;
+    try { count = parseInt(localStorage.getItem(NEW_USER_NOTIFY_KEY) || '0', 10) || 0; } catch (e) { /* ใช้ 0 */ }
+
+    document.querySelectorAll('.new-user-notify-badge').forEach(badge => {
+        badge.innerText = count > 9 ? '9+' : String(count);
+        badge.classList.toggle('hidden', count <= 0);
+    });
+}
+
+function clearNewUserNotifications() {
+    try { localStorage.setItem(NEW_USER_NOTIFY_KEY, '0'); } catch (e) { /* ข้ามได้ */ }
+    updateNewUserNotifyBadge();
+}
+
+// แปลง Firestore Timestamp (หรือค่าอื่นๆ) เป็นวันที่อ่านง่ายสำหรับแสดงผล
+function formatUserCreatedAt(ts) {
+    try {
+        if (!ts) return '-';
+        const d = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (e) {
+        return '-';
+    }
+}
+
+// เรนเดอร์ตารางผู้สมัครทั้งหมด (ค้นหาได้ตามชื่อ/อีเมล/เบอร์โทร) พร้อมปุ่มดูรายละเอียด/แก้ไข/ระงับบัญชี
+function renderAdminUsersList() {
+    const tbody = document.getElementById('adminUsersListBody');
+    const emptyMsg = document.getElementById('adminUsersListEmpty');
+    if (!tbody) return;
+
+    // ตัวเลขจำนวนผู้สมัครทั้งหมด (badge บนแท็บ + ตัวเลขสรุปด้านบนตาราง) ไม่ขึ้นกับคำค้นหา
+    const countBadge = document.getElementById('adminUsersCountBadge');
+    const totalCount = document.getElementById('adminUsersTotalCount');
+    if (countBadge) countBadge.innerText = String(allUsersList.length);
+    if (totalCount) totalCount.innerText = String(allUsersList.length);
+
+    const searchInput = document.getElementById('adminUserSearchInput');
+    const keyword = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+    const list = allUsersList.filter(u => {
+        if (!keyword) return true;
+        const hay = `${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.phone || ''}`.toLowerCase();
+        return hay.includes(keyword);
+    });
+
+    if (list.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = list.map(u => {
+        const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || '-';
+        const isSuspended = u.suspended === true;
+        return `
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
+            <td class="py-2 pr-2">
+                <div class="min-w-0">
+                    <p class="text-white font-semibold truncate max-w-[140px]">${name}</p>
+                    ${u.role === 'admin' ? '<span class="text-[9px] bg-[var(--theme-500)]/20 text-[var(--theme-400)] px-1.5 py-0.5 rounded-full">Admin</span>' : ''}
+                </div>
+            </td>
+            <td class="py-2 pr-2 text-gray-300">
+                <p class="truncate max-w-[160px]">${u.email || '-'}</p>
+                <p class="text-gray-500 text-[10px]">${u.phone || '-'}</p>
+            </td>
+            <td class="py-2 pr-2 text-gray-400 text-[10px] whitespace-nowrap">${formatUserCreatedAt(u.createdAt)}</td>
+            <td class="py-2 pr-2">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isSuspended ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">
+                    ${isSuspended ? 'ถูกระงับ' : 'ปกติ'}
+                </span>
+            </td>
+            <td class="py-2 pr-2 text-right whitespace-nowrap">
+                <button onclick="openAccountModal('${u.uid}', 'view')" class="text-gray-400 hover:text-[var(--theme-400)] px-1.5" title="ดูรายละเอียดบัญชี">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+                <button onclick="openAccountModal('${u.uid}', 'edit')" class="text-gray-400 hover:text-[var(--theme-400)] px-1.5" title="แก้ไขบัญชี">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="toggleSuspendUser('${u.uid}', ${!isSuspended})"
+                    class="text-gray-400 ${isSuspended ? 'hover:text-emerald-400' : 'hover:text-red-400'} px-1.5"
+                    title="${isSuspended ? 'เปิดใช้งานบัญชี' : 'ระงับบัญชี'}">
+                    <i class="fa-solid ${isSuspended ? 'fa-lock-open' : 'fa-ban'}"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// เปิด modal บัญชีผู้ใช้ mode = 'view' (ดูอย่างเดียว) หรือ 'edit' (แก้ไขได้)
+function openAccountModal(uid, mode) {
+    const u = allUsersList.find(x => x.uid === uid);
+    if (!u) return;
+
+    document.getElementById('accountModalUid').value = uid;
+    document.getElementById('accountModalFirstName').value = u.firstName || '';
+    document.getElementById('accountModalLastName').value = u.lastName || '';
+    document.getElementById('accountModalEmail').value = u.email || '';
+    document.getElementById('accountModalPhone').value = u.phone || '';
+    document.getElementById('accountModalAddress').value = u.address || '';
+    document.getElementById('accountModalRole').value = u.role || 'user';
+    document.getElementById('accountModalCreatedAt').innerText = formatUserCreatedAt(u.createdAt);
+
+    const isSuspended = u.suspended === true;
+    const statusBadge = document.getElementById('accountModalStatusBadge');
+    if (statusBadge) {
+        statusBadge.innerText = isSuspended ? 'ถูกระงับ' : 'ปกติ';
+        statusBadge.className = `text-[11px] font-bold px-2 py-0.5 rounded-full ${isSuspended ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`;
+    }
+
+    const editable = mode === 'edit';
+    ['accountModalFirstName', 'accountModalLastName', 'accountModalPhone', 'accountModalAddress', 'accountModalRole'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !editable;
+    });
+    const editActions = document.getElementById('accountModalEditActions');
+    if (editActions) editActions.classList.toggle('hidden', !editable);
+
+    const title = document.getElementById('accountModalTitle');
+    if (title) title.innerText = editable ? 'แก้ไขบัญชีผู้ใช้' : 'รายละเอียดบัญชี';
+
+    const modal = document.getElementById('accountModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeAccountModal() {
+    const modal = document.getElementById('accountModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// บันทึกการแก้ไขบัญชีผู้ใช้ (แอดมินเท่านั้น) — อีเมลแก้ไม่ได้เพราะผูกกับ Firebase Authentication โดยตรง
+async function saveAccountEdits(e) {
+    if (e) e.preventDefault();
+    if (!isCurrentUserAdmin()) {
+        alert('คุณไม่มีสิทธิ์ทำรายการนี้');
+        return;
+    }
+
+    const uid = document.getElementById('accountModalUid').value;
+    if (!uid) return;
+
+    const updatedData = {
+        firstName: document.getElementById('accountModalFirstName').value.trim(),
+        lastName: document.getElementById('accountModalLastName').value.trim(),
+        phone: document.getElementById('accountModalPhone').value.trim(),
+        address: document.getElementById('accountModalAddress').value.trim(),
+        role: document.getElementById('accountModalRole').value
+    };
+
+    try {
+        await db.collection('users').doc(uid).update(updatedData);
+        if (typeof showPaymentToast === 'function') showPaymentToast('บันทึกข้อมูลบัญชีเรียบร้อยแล้ว', 'success');
+        closeAccountModal();
+    } catch (error) {
+        console.error('แก้ไขบัญชีผู้ใช้ไม่สำเร็จ:', error);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+    }
+}
+
+// ระงับ/เปิดใช้งานบัญชีผู้ใช้ (แอดมินเท่านั้น) — บัญชีที่ถูกระงับจะถูกบังคับออกจากระบบอัตโนมัติ
+// ทันทีที่ auth.onAuthStateChanged ตรวจพบ field suspended === true (ดูจุดตรวจใน onAuthStateChanged ด้านล่าง)
+async function toggleSuspendUser(uid, suspend) {
+    if (!isCurrentUserAdmin()) {
+        alert('คุณไม่มีสิทธิ์ทำรายการนี้');
+        return;
+    }
+
+    const u = allUsersList.find(x => x.uid === uid);
+    const name = u ? ([u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || uid) : uid;
+
+    const confirmMsg = suspend
+        ? `ยืนยันระงับบัญชีของ "${name}" ใช่ไหม? ผู้ใช้จะไม่สามารถเข้าสู่ระบบได้จนกว่าจะเปิดใช้งานอีกครั้ง`
+        : `ยืนยันเปิดใช้งานบัญชีของ "${name}" อีกครั้งใช่ไหม?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        await db.collection('users').doc(uid).update({ suspended: suspend });
+        if (typeof showPaymentToast === 'function') {
+            showPaymentToast(suspend ? `ระงับบัญชี "${name}" แล้ว` : `เปิดใช้งานบัญชี "${name}" แล้ว`, suspend ? 'error' : 'success');
+        }
+    } catch (error) {
+        console.error('อัปเดตสถานะบัญชีไม่สำเร็จ:', error);
+        alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    }
 }
 
 // ==========================================
