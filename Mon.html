@@ -370,12 +370,14 @@
                     <!-- ปุ่มจัดการสินค้า -->
                     <button onclick="openAdminModal()"
                         class="admin-only-btn hidden text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-gray-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shrink-0">
-                        <i class="fa-solid fa-gear text-cyan-400"></i> <span data-i18n="adminManage">จัดการสินค้า</span>
+                        <i class="fa-solid fa-gear text-[var(--theme-400)]"></i> <span data-i18n="adminManage">จัดการสินค้า</span>
                     </button>
-                    <!-- ปุ่มตั้งค่า Admin (รายการสินค้าทั้งหมด / ธีมสี / ผู้ใช้ออนไลน์) -->
+
+                    <!-- ปุ่มตั้งค่า Admin (รายการสินค้าทั้งหมด / ผู้สมัครทั้งหมด / ผู้ใช้ออนไลน์) -->
                     <button onclick="openAdminSettingsModal()"
-                        class="admin-only-btn hidden text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-gray-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shrink-0">
+                        class="admin-only-btn hidden relative text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-gray-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shrink-0">
                         <i class="fa-solid fa-sliders text-[var(--theme-400)]"></i> <span data-i18n="adminSettings">ตั้งค่า (Admin)</span>
+                        <span class="new-user-notify-badge hidden absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">0</span>
                     </button>
                 </div>
 
@@ -718,7 +720,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-gray-400 mb-1"
-                            data-i18n="pSubCatLabel">ประเภทพิเศษ</label>
+                            data-i18n="pSubCatLabel">ชนิดสินค้า</label>
                         <select id="pSubCategory"
                             class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
                             <option value="normal" data-i18n="pSubNormal">สินค้าทั่วไป</option>
@@ -752,7 +754,7 @@
                 </div>
                 <div class="flex gap-2 pt-2">
                     <button type="submit"
-                        class="flex-1 bg-cyan-500 text-slate-950 font-bold py-2 rounded text-xs hover:bg-cyan-400 transition"
+                        class="flex-1 bg-[var(--theme-500)] text-slate-950 font-bold py-2 rounded text-xs hover:bg-[var(--theme-400)] transition"
                         data-i18n="saveBtn">บันทึกข้อมูลสินค้า</button>
                     <button type="button" onclick="resetAdminForm()"
                         class="bg-slate-700 text-gray-200 font-bold px-4 py-2 rounded text-xs hover:bg-slate-600 transition"
@@ -782,9 +784,11 @@
                     <span id="adminProductsCountBadge"
                         class="ml-1 inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 text-[11px] font-bold leading-none bg-[var(--theme-500)] text-white rounded-full">0</span>
                 </button>
-                <button onclick="switchAdminSettingsTab('theme')" id="adminTabBtn-theme"
+                <button onclick="switchAdminSettingsTab('users')" id="adminTabBtn-users"
                     class="admin-settings-tab-btn px-3 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap">
-                    <i class="fa-solid fa-palette"></i> <span data-i18n="adminTabTheme">ธีมสี</span>
+                    <i class="fa-solid fa-users"></i> <span data-i18n="adminTabUsers">ผู้สมัครทั้งหมด</span>
+                    <span id="adminUsersCountBadge"
+                        class="ml-1 inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 text-[11px] font-bold leading-none bg-[var(--theme-500)] text-white rounded-full">0</span>
                 </button>
                 <button onclick="switchAdminSettingsTab('online')" id="adminTabBtn-online"
                     class="admin-settings-tab-btn px-3 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap">
@@ -818,19 +822,30 @@
                 </div>
             </div>
 
-            <!-- Tab: ธีมสี -->
-            <div id="adminSettingsTab-theme" class="admin-settings-tab-panel hidden">
-                <div class="mb-5">
-                    <p class="text-xs font-semibold text-gray-400 mb-2" data-i18n="adminThemeModeLabel">โหมดสี</p>
-                    <button onclick="toggleTheme()"
-                        class="text-xs bg-slate-800 hover:bg-slate-700 text-gray-200 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2">
-                        <i class="fa-solid fa-circle-half-stroke"></i> <span data-i18n="adminThemeModeToggle">สลับโหมดสว่าง / มืด</span>
-                    </button>
+            <!-- Tab: ผู้สมัครทั้งหมด (รายชื่อบัญชีที่สมัครสมาชิกทุกคน) -->
+            <div id="adminSettingsTab-users" class="admin-settings-tab-panel hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                    <input type="text" id="adminUserSearchInput" oninput="renderAdminUsersList()"
+                        placeholder="ค้นหาผู้ใช้ตามชื่อ/อีเมล/เบอร์โทร..."
+                        class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs text-white">
+                    <p class="text-[11px] text-gray-400 whitespace-nowrap shrink-0">
+                        สมัครแล้วทั้งหมด <span id="adminUsersTotalCount" class="text-[var(--theme-400)] font-bold">0</span> คน
+                    </p>
                 </div>
-                <div>
-                    <p class="text-xs font-semibold text-gray-400 mb-2" data-i18n="adminThemeColorLabel">โทนสีเว็บ
-                        (เปลี่ยนทั้งเว็บ รวมโลโก้)</p>
-                    <div id="themeColorSwatches" class="flex flex-wrap gap-3"></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="text-gray-400 border-b border-slate-800">
+                            <tr>
+                                <th class="py-2 pr-2">ผู้ใช้</th>
+                                <th class="py-2 pr-2">ติดต่อ</th>
+                                <th class="py-2 pr-2">สมัครเมื่อ</th>
+                                <th class="py-2 pr-2">สถานะ</th>
+                                <th class="py-2 pr-2 text-right">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersListBody"></tbody>
+                    </table>
+                    <p id="adminUsersListEmpty" class="text-center text-gray-500 text-xs py-6 hidden">ไม่พบผู้ใช้</p>
                 </div>
             </div>
 
