@@ -1575,8 +1575,9 @@ function addToCart(productId) {
 
 function updateCartCount() {
     const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const cartCountEl = document.getElementById('cartCount');
-    if (cartCountEl) cartCountEl.innerText = totalCount;
+    document.querySelectorAll('.cart-count-el').forEach(el => {
+        el.innerText = totalCount;
+    });
 }
 
 function renderCartItems() {
@@ -2441,10 +2442,10 @@ auth.onAuthStateChanged(async (user) => {
         // เริ่มส่งสถานะ "ออนไลน์อยู่" ให้แอดมินเห็นได้ในหน้าตั้งค่า
         if (typeof startPresenceHeartbeat === 'function') startPresenceHeartbeat(currentUser, currentUserData);
 
-        // ถ้าเป็นแอดมิน เริ่มติดตามรายชื่อผู้สมัครทั้งหมด + แจ้งเตือนผู้สมัครใหม่แบบเรียลไทม์
-        if (isCurrentUserAdmin() && typeof startAdminUsersListener === 'function') {
-            startAdminUsersListener();
-        }
+        // หมายเหตุ: เดิม startAdminUsersListener() (อ่าน collection "users" ทั้งหมด) ถูกเรียกตรงนี้
+        // ทำให้ทุกครั้งที่ admin เปิดหน้าใหม่ (เว็บนี้เป็น multi-page ไม่ใช่ SPA) จะยิงอ่านผู้ใช้ทั้งหมดซ้ำ
+        // ย้ายไปเรียกตอนเปิด modal "ตั้งค่า (Admin)" แทนแล้ว (ดู openAdminSettingsModal / closeAdminSettingsModal)
+        // ผลคือแจ้งเตือนผู้สมัครใหม่แบบเรียลไทม์จะทำงานเฉพาะตอนเปิด modal ค้างไว้เท่านั้น ไม่ทำงานพื้นหลังทุกหน้าอีกต่อไป
     } else {
         currentUserData = null;
         cart = [];
@@ -2702,6 +2703,9 @@ function openAdminSettingsModal() {
     modal.classList.remove('hidden');
     switchAdminSettingsTab('products');
     startOnlineUsersListener();
+    // เริ่มติดตามรายชื่อผู้สมัครทั้งหมดแบบเรียลไทม์เฉพาะตอนเปิด modal นี้เท่านั้น (lazy)
+    // เดิมเริ่มตั้งแต่ auth state เปลี่ยนเป็น admin ทำให้อ่าน collection "users" ทั้งหมดซ้ำทุกหน้าที่เปิด
+    if (typeof startAdminUsersListener === 'function') startAdminUsersListener();
     if (typeof renderAdminUsersList === 'function') renderAdminUsersList();
 }
 
@@ -2709,6 +2713,8 @@ function closeAdminSettingsModal() {
     const modal = document.getElementById('adminSettingsModal');
     if (modal) modal.classList.add('hidden');
     stopOnlineUsersListener();
+    // ปิด listener ของรายชื่อผู้สมัครทั้งหมดไปด้วย ไม่ให้ค้างอ่าน Firestore ต่อหลัง modal ปิดไปแล้ว
+    if (typeof stopAdminUsersListener === 'function') stopAdminUsersListener();
 }
 
 function switchAdminSettingsTab(tabName) {

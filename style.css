@@ -532,3 +532,43 @@ body.light-mode #pageLoader .page-loader-logo {
     visibility: hidden;
     pointer-events: none;
 }
+/* ==========================================
+   FIX: Admin toolbar overflow on mobile
+   ปุ่ม "จัดการสินค้า" และ "ตั้งค่า (Admin)" ที่ปรากฏเฉพาะบัญชี admin
+   จะถูกดันออกนอกจอบนมือถือ เพราะแถบหมวดหมู่ (category bar) เป็น
+   flex แถวเดียวแบบไม่ wrap และฝั่งขวา (dropdown + ปุ่ม admin) เป็น shrink-0
+   จึงไม่ยอมย่อ ทำให้ล้นออกนอกหน้าจอ/ทับซ้อนกันในหน้าจอเล็ก
+   ========================================== */
+@media (max-width: 639px) {
+    /* ให้แถวหมวดหมู่ยอม wrap แทนที่จะดันของออกนอกจอ
+       (เจาะจงด้วย .text-xs.sm\:text-sm.font-medium.py-2 เพื่อไม่ให้ไปโดน
+       แถวโลโก้/ช่องค้นหาด้านบน ซึ่งมีคลาส justify-between/gap-2 ร่วมกันอยู่) */
+    header .max-w-7xl.mx-auto.px-3.sm\:px-4.flex.items-center.justify-between.gap-2.sm\:gap-4.text-xs.sm\:text-sm.font-medium.py-2 {
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+
+    /* บล็อกหมวดหมู่ที่เลื่อนได้ ให้กว้างเต็มแถวบนของ 2 แถว */
+    header .flex.items-center.gap-2.sm\:gap-4.overflow-x-auto.no-scrollbar.py-1.shrink.min-w-0 {
+        flex-basis: 100%;
+        min-width: 0;
+    }
+
+    /* กลุ่มฝั่งขวา (ปุ่ม "เพิ่มเติม" + ปุ่ม admin) ให้ตกลงมาอยู่แถวที่ 2 เต็มความกว้าง
+       และปุ่มในนั้นค่อยห่อบรรทัดกันเองถ้ายังไม่พอ แทนที่จะล้นจอ */
+    header .flex.items-center.gap-2.shrink-0 {
+        flex-basis: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    /* ย่อปุ่ม admin ให้กระชับขึ้นบนมือถือ: เหลือแค่ไอคอน ไม่ต้องมีข้อความยาว */
+    .admin-only-btn span[data-i18n="adminManage"],
+    .admin-only-btn span[data-i18n="adminSettings"] {
+        display: none;
+    }
+
+    .admin-only-btn {
+        padding: 0.5rem 0.6rem;
+    }
+}
